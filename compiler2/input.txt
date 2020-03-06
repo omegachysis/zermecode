@@ -1,3 +1,9 @@
 fn main() {
-    
+
 }
+
+fn main() {
+
+}
+
+fn test() { }

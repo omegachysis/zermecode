@@ -7,22 +7,28 @@ public struct Token
 {
     public string Text;
     public TokenId Id;
+    public int Line;
+    public int Col;
 
-    public Token(TokenId id)
+    public Token(TokenId id, int line, int col)
     {
         Id = id;
         Text = string.Empty;
+        Line = line;
+        Col = col;
     }
 
-    public Token(TokenId id, string text)
+    public Token(TokenId id, string text, int line, int col)
     {
         Id = id;
         Text = text;
+        Line = line;
+        Col = col;
     }
 
     public override string ToString()
     {
-        return $"({Id},`{Regex.Escape(Text)}`)";
+        return $"({Id},`{Regex.Escape(Text)}`,{Line}:{Col})";
     }
 }
 
