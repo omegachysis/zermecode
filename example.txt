@@ -1,0 +1,24 @@
+type Vec3 {
+    // ?= is the 'default equality operator'. It means that 
+    // the quantity will be equal to the value unless it is 
+    // specified otherwise when the variable is declared (on construction of Vec3).
+    F32 x ?= 0;
+    F32 y ?= 0;
+    F32 z ?= 0;
+
+    // = is the 'equality operator'. It means that the identities 
+    // below are immutably set to the quantity to the right.
+    // Any immutable type data is automatically treated as 'static'.
+    zero = new This();
+    unitX = new This(x = 1);
+    unitY = new This(y = 1);
+    unitZ = new This(z = 1);
+}
+
+fn Vec(F32 x, F32 y, F32 z) -> Vec3 {
+    new Vec3(x, y, z)
+}
+
+fn main() {
+    a := Vec(1,2,3);
+}
