@@ -1,0 +1,40 @@
+
+fn square(Int x) -> Int {
+    x * x
+}
+
+fn main1() {
+    a = 1;
+    b = square(a);
+    c = square(a);
+}
+
+fn increment(Int x) {
+    x += 1; // ERROR: 'x' is immutably borrowed.
+}
+
+fn increment(Int& x) {
+    x += 1;
+}
+
+fn main3() {
+    a = 1;
+    b = increment(a); //ERROR: increment requires mutable borrow, but 'a' is immutable.
+
+    b := 1;
+    c = increment(b);
+    notice(b = 2);
+}
+
+fn steal(Int* x) { }
+
+fn main4() {
+    a := 1;
+    steal(a);
+
+    b = square(a); //ERROR: 'a' is transferred ownership to 'steal(a)'.
+
+    b := 1;
+    steal(b'); // makes a copy of 'b'
+    c = square(b);
+}
