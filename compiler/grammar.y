@@ -1,78 +1,81 @@
-/* Reverse Polish Notation calculator. */
-
 %{
-  #include <stdio.h>
-  #include <math.h>
-  int yylex (void);
-  void yyerror (char const *);
-%}
-
-%glr-parser
-%expect-rr 1
-%define api.value.type {double}
-%token NUM
-
-%% /* Grammar rules and actions follow. */
-
-input:
-  %empty
-| input line
-;
-
-line:
-  '\n'
-| exp '\n'      { printf ("%.10g\n", $1); }
-;
-
-exp:
-  NUM
-| exp exp '+'   { $$ = $1 + $2;      }
-| exp exp '-'   { $$ = $1 - $2;      }
-| exp exp '*'   { $$ = $1 * $2;      }
-| exp exp '/'   { $$ = $1 / $2;      }
-| exp exp '^'   { $$ = pow ($1, $2); }  /* Exponentiation */
-| exp 'n'       { $$ = -$1;          }  /* Unary minus   */
-;
-%%
-
-/* The lexical analyzer returns a double floating point
-   number on the stack and the token NUM, or the numeric code
-   of the character read if not a number.  It skips all blanks
-   and tabs, and returns 0 for end-of-input. */
-
-#include <ctype.h>
-
-int yylex (void)
-{
-  int c = getchar ();
-  /* Skip white space. */
-  while (c == ' ' || c == '\t')
-    c = getchar ();
-  /* Process numbers. */
-  if (c == '.' || isdigit (c))
-    {
-      ungetc (c, stdin);
-      scanf ("%lf", &yylval);
-      return NUM;
-    }
-  /* Return end-of-input. */
-  else if (c == EOF)
-    return 0;
-  /* Return a single char. */
-  else
-    return c;
-}
 
 #include <stdio.h>
+#include <stdlib.h>
 
-/* Called by yyparse on error. */
-void
-yyerror (char const *s)
-{
-  fprintf (stderr, "%s\n", s);
+extern int yylex();
+extern int yyparse();
+extern FILE* yyin;
+
+void yyerror(const char* s);
+%}
+
+%union {
+	int ival;
+	float fval;
 }
 
-int main (void)
-{
-  return yyparse ();
+%token<ival> T_INT
+%token<fval> T_FLOAT
+%token T_PLUS T_MINUS T_MULTIPLY T_DIVIDE T_LEFT T_RIGHT
+%token T_NEWLINE T_QUIT
+%left T_PLUS T_MINUS
+%left T_MULTIPLY T_DIVIDE
+
+%type<ival> expression
+%type<fval> mixed_expression
+
+%start calculation
+
+%%
+
+calculation:
+	   | calculation line
+;
+
+line: T_NEWLINE
+    | mixed_expression T_NEWLINE { printf("\tResult: %f\n", $1);}
+    | expression T_NEWLINE { printf("\tResult: %i\n", $1); }
+    | T_QUIT T_NEWLINE { printf("bye!\n"); exit(0); }
+;
+
+mixed_expression: T_FLOAT                 		 { $$ = $1; }
+	  | mixed_expression T_PLUS mixed_expression	 { $$ = $1 + $3; }
+	  | mixed_expression T_MINUS mixed_expression	 { $$ = $1 - $3; }
+	  | mixed_expression T_MULTIPLY mixed_expression { $$ = $1 * $3; }
+	  | mixed_expression T_DIVIDE mixed_expression	 { $$ = $1 / $3; }
+	  | T_LEFT mixed_expression T_RIGHT		 { $$ = $2; }
+	  | expression T_PLUS mixed_expression	 	 { $$ = $1 + $3; }
+	  | expression T_MINUS mixed_expression	 	 { $$ = $1 - $3; }
+	  | expression T_MULTIPLY mixed_expression 	 { $$ = $1 * $3; }
+	  | expression T_DIVIDE mixed_expression	 { $$ = $1 / $3; }
+	  | mixed_expression T_PLUS expression	 	 { $$ = $1 + $3; }
+	  | mixed_expression T_MINUS expression	 	 { $$ = $1 - $3; }
+	  | mixed_expression T_MULTIPLY expression 	 { $$ = $1 * $3; }
+	  | mixed_expression T_DIVIDE expression	 { $$ = $1 / $3; }
+	  | expression T_DIVIDE expression		 { $$ = $1 / (float)$3; }
+;
+
+expression: T_INT				{ $$ = $1; }
+	  | expression T_PLUS expression	{ $$ = $1 + $3; }
+	  | expression T_MINUS expression	{ $$ = $1 - $3; }
+	  | expression T_MULTIPLY expression	{ $$ = $1 * $3; }
+	  | T_LEFT expression T_RIGHT		{ $$ = $2; }
+;
+
+%%
+
+int main() {
+	yyin = stdin;
+
+	do {
+		yyparse();
+	} while(!feof(yyin));
+
+	return 0;
+}
+
+void yyerror(const char* s) {
+	fprintf(stderr, "Parse error: %s\n", s);
+	exit(1);
 }
