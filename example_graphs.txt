@@ -1,0 +1,34 @@
+
+type Vertex<T> {
+    T Data ?= default(T);
+}
+
+type Edge<T> {
+    Vertex<T> a = _;
+    Vertex<T> b = _;
+
+    fn toString() -> String {
+        ...
+    }
+}
+
+type Graph<T> {
+    List<Vertex<T>> V ?:= [];
+
+    // ERROR:
+    fn getVertices() -> List<Vertex<T>> {
+        V
+    }
+    // Cannot return 'V' since 'V' is owned.
+    // Either return a copy or make 'V' into a reference.
+}
+
+fn main() {
+
+    g1 := Graph<Int>()
+
+    // ERROR:
+    g1.V.add(Vertex<Int>())
+    // add(List<Int>&, Int) requires a mutable borrow of 
+    // 'g1.V', but 'g1' owns 'V'.
+}

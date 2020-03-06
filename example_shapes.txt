@@ -1,0 +1,55 @@
+type Shape {
+    fn draw(Ctx&);
+    fn &translate(Real x, Real y);
+}
+
+type Point : Shape {
+    Real x := _;
+    Real y := _;
+
+    fn draw(Ctx& ctx) { /* ... */ }
+
+    fn &translate(Real x, Real y) {
+        this.x += x;
+        this.y += y;
+    }
+}
+
+type Rectangle : Shape {
+    Real centerX := _;
+    Real centerY := _;
+
+    #foreach $metric as width, height {
+        Real _$metric := _;
+        assume(_$metric) > 0;
+        
+        get $metric -> Real {
+            _$metric
+        }
+        set $metric {
+            assume(value > 0);
+            _$metric = value;
+        }
+    }
+
+    fn draw(Ctx& ctx) { /* ... */ }
+
+    fn &translate(Real x, Real y) {
+        this.centerX += x;
+        this.centerY += y;
+    }
+
+    fn &scale(Real x, Real y) {
+        assume(x > 0);
+        assume(y > 0);
+        this._width *= x;
+        this._height *= y;
+    }
+}
+
+type BetterRectangle : Rectangle {
+    fn draw(Ctx& ctx) {
+        override;
+        /* ... */
+    }
+}

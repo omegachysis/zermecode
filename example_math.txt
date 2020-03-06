@@ -1,0 +1,17 @@
+print = Std.Console.writeLine;
+
+fn main() {
+    a = 1; // Int
+    b = 2; // Int
+    c = 0.5; // Rat
+
+    print(a + b); // 3
+    print(a - b); // -1
+    print(a * b); // 2
+    print(a / b); // 1/2
+    print(c); // 1/2
+
+    print(.3 + .3 + .3); // 9/10
+    print(.3f + .3f + .3f); // Whatever IEEE standards say should happen here.
+
+}
