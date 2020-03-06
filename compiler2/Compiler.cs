@@ -5,13 +5,9 @@ namespace compiler2
 {
     public class Compiler
     {
-        private Lexer _lex;
-        private StreamWriter _outStream;
-
-        public Compiler(StreamReader inStream, StreamWriter outStream)
+        public void Write(ast.Program ast, StreamWriter stream)
         {
-            _lex = new Lexer(inStream);
-            _outStream = outStream;
+            
         }
     }
 }

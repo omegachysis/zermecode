@@ -8,7 +8,7 @@ namespace compiler2
 {
     public class Lexer
     {
-        private StreamReader _stream;
+        private readonly StreamReader _stream;
 
         public Lexer(StreamReader stream)
         {
