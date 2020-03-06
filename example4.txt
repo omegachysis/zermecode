@@ -1,0 +1,42 @@
+type MyInt {
+    Int x ?= 0;
+}
+
+type MaybeMyInt = None, MyInt;
+
+// T? is syntactic sugar for Maybe<T>.
+type Maybe<T> = None, T;
+
+fn try<TArgs, TReturn>(f(TArgs...) -> TReturn f, TArgs... args) -> TReturn? {
+    if (f.accepts(args...)) {
+        f(args...)
+    } else {
+        None
+    }
+}
+
+fn main() {
+    a = MyInt(1);
+    b := MaybeMyInt.None;
+    b := MaybeMyInt.Just(a);
+
+    c := MyInt?.Just(MyInt(1));
+    c := MyInt?.None;
+    d := Int?.Just(1);
+    d := Int?.None;
+
+    // We can use the Maybe type to conform to assumptions:
+    x = std.console.readLine()->Float32;
+    e = if (it.accepts(x) where it = truncate(_)->Nat) {
+        it(x)
+    } else {
+        None
+    }
+
+    // ...or do the (almost*) equivalent with 'try':
+    f = truncate(_)->Nat.try(x);
+
+    //*NOTE: 'e' is of the algebraic datatype 'Nat + None',
+    // while 'f' is 'Nat?', but algebraic datatypes are automatically casted into 
+    // eachother if they are the same, so there is no effective difference.
+}
