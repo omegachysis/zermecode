@@ -1,2 +1,2 @@
-g++ bin/ir.c -o bin/result
+g++ bin/ir.cpp -o bin/result
 ./bin/result

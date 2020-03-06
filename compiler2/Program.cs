@@ -9,15 +9,6 @@ namespace compiler2
     {
         static void Main(string[] args)
         {
-            // using (var file = new StreamWriter("bin/ir.c"))
-            // {
-            //     file.WriteLine("#include <stdio.h>");
-            //     file.Write("int main() {");
-            //     file.Write("printf(\"Hello, this is me!\");");
-            //     file.Write("return 0;");
-            //     file.Write("}");
-            // }
-
             ast.Program ast;
             using (var inStream = new StreamReader("input.txt"))
             {
@@ -39,7 +30,7 @@ namespace compiler2
 
             var compiler = new Compiler();
 
-            using (var outStream = new StreamWriter("bin/ir.c"))
+            using (var outStream = new StreamWriter("bin/ir.cpp"))
                 compiler.Write(ast, outStream);
         }
     }

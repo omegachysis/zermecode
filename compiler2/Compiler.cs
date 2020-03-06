@@ -7,7 +7,8 @@ namespace compiler2
     {
         public void Write(ast.Program ast, StreamWriter stream)
         {
-            
+            stream.WriteLine("#include <iostream>");
+            stream.WriteLine("int main() { std::cout << \"Hello\"; return 0; }");
         }
     }
 }
