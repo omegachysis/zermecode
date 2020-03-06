@@ -17,13 +17,10 @@ fn try<TArgs, TReturn>(f(TArgs...) -> TReturn f, TArgs... args) -> TReturn? {
 
 fn main() {
     a = MyInt(1);
-    b := MaybeMyInt.None;
-    b := MaybeMyInt.Just(a);
-
-    c := MyInt?.Just(MyInt(1));
-    c := MyInt?.None;
-    d := Int?.Just(1);
-    d := Int?.None;
+    b := None;
+    b := a;
+    d := 1;
+    d := None;
 
     // We can use the Maybe type to conform to assumptions:
     x = std.console.readLine()->Float32;
