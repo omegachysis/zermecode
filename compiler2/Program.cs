@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿#nullable enable
+using System;
+using System.IO;
 using System.Text;
 
 namespace compiler2
@@ -7,13 +9,21 @@ namespace compiler2
     {
         static void Main(string[] args)
         {
-            using (var file = new StreamWriter("bin.ir.c"))
+            // using (var file = new StreamWriter("bin/ir.c"))
+            // {
+            //     file.WriteLine("#include <stdio.h>");
+            //     file.Write("int main() {");
+            //     file.Write("printf(\"Hello, this is me!\");");
+            //     file.Write("return 0;");
+            //     file.Write("}");
+            // }
+
+            using (var inStream = new StreamReader("input.txt"))
             {
-                file.WriteLine("#include <stdio.h>");
-                file.Write("int main() {");
-                file.Write("printf(\"Hello, this is me!\");");
-                file.Write("return 0;");
-                file.Write("}");
+                var lex = new Lexer(inStream);
+                var tokens = lex.Tokens().GetEnumerator();
+                while (tokens.MoveNext())
+                    Console.WriteLine(tokens.Current);
             }
         }
     }
