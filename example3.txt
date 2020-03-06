@@ -1,0 +1,51 @@
+
+fn truncate(Float x) -> Int {
+    ...
+    assert x - 1 <= ans <= x;
+    ans
+}
+
+fn truncate(Float x) -> Nat {
+    assume x >= 1;
+    ...
+    assert x - 1 <= ans <= x;
+    ans
+}
+
+fn main1() {
+    a = truncate(2.0f32) // ERROR: Need to specify an 'into' type.
+    a = truncate(2.0f32)->Int;
+    b = truncate(2.0f32)->Nat; // constant proves x >= 1.
+    c = truncate(-1.0f32)->Nat; // ERROR: contradiction, constant proves !(x >= 1).
+
+    x = std.console.readLine()->Float32;
+    c = truncate(x)->Nat; // ERROR: need a proof that x >= 1.
+
+    verify x >= 1;
+    c = truncate(x)->Nat; // throws an error at 'verify' if !(x >= 1).
+}
+
+fn main2() {
+    x = std.console.readLine()->Float32;
+
+    c = if (x >= 1) {
+        truncate(x)->Nat // 'if' provides proof that x >= 1
+    } else {
+        1
+    }
+}
+
+// Proof keywords:
+
+// assert: builds the knowledge base into the metadata of functions and blocks 
+//  for compiling. Does not affect program execution.
+
+// verify: checks at runtime that the given claim is true and raises a 
+//  runtime exception if it is not.
+
+// notice: checks at compile time that the given claim is proven.
+//  Does not affect program execution.
+
+// assume: builds a requirement into the metadata of functions and requires 
+//  that the provided condition is proven for function execution.
+//  Does not affect program execution.

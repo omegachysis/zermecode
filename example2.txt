@@ -1,0 +1,14 @@
+type Vec3<T> where T : Field {
+    T x ?= T.zero;
+    T y ?= T.zero;
+    T z ?= T.zero;
+
+    zero = new This();
+    unitX = new This(x = T.unit);
+    unitY = new This(y = T.unit);
+    unitZ = new This(z = T.unit);
+}
+
+fn main() {
+    a := Vec<Int>(1,2,3);
+}
