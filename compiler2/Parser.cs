@@ -54,13 +54,13 @@ namespace compiler2
                     var fn = ParseFnDecl();
 
                     // Check uniqueness:
-                    if (block!.Decls.Contains(fn))
+                    if (block!.FnDecls.Contains(fn))
                     {
                         throw new ParseError(fn.Id,
                             $"{fn} already declared in this scope");
                     }
 
-                    block.Decls.Add(fn);
+                    block.FnDecls.Add(fn);
                 }
                 else if (t.Id == TokenId.Id)
                 {

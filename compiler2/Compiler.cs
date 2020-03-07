@@ -51,7 +51,7 @@ namespace compiler2.ast
                 Printer.Print("");
                 if (Body != null)
                 {
-                    foreach (var decl in Body.Decls)
+                    foreach (var decl in Body.FnDecls)
                         decl.Show();
                     foreach (var stmt in Body.Stmts)
                         stmt.Show();
@@ -84,8 +84,8 @@ typedef int __ZERM__CInt32;
     {
         public Token Token;
 
-        public HashSet<Decl> Decls = new HashSet<global::compiler2.ast.Decl>();
-        public List<Stmt> Stmts = new List<global::compiler2.ast.Stmt>();
+        public HashSet<FnDecl> FnDecls = new HashSet<ast.FnDecl>();
+        public List<Stmt> Stmts = new List<ast.Stmt>();
         public Block? Parent;
 
         public Block(Token token, Block? parent)
@@ -100,9 +100,9 @@ typedef int __ZERM__CInt32;
 
         public void Emit(StreamWriter stream)
         {
-            foreach (var decl in Decls)
+            foreach (var decl in FnDecls)
                 decl.EmitForwardDeclaration(stream);
-            foreach (var decl in Decls)
+            foreach (var decl in FnDecls)
                 decl.EmitImplementation(stream);
             foreach (var stmt in Stmts)
                 stmt.Emit(stream);
@@ -112,7 +112,7 @@ typedef int __ZERM__CInt32;
         {
             Console.WriteLine($"FindFn: {this}, {call}");
 
-            var matches = Decls.Where(x => x.Id.Text == call.Id.Text).ToList();
+            var matches = FnDecls.Where(x => x.Id.Text == call.Id.Text).ToList();
             if (matches.Count == 0)
             {
                 if (Parent == null)
@@ -131,30 +131,19 @@ typedef int __ZERM__CInt32;
         }
     }
 
-    public abstract class Decl : IShowable
+    public class FnDecl : IShowable
     {
+        public TypeSpec? ReturnType = null;
+        public List<Param> Params = new List<compiler2.ast.Param>();
+        public Block? Body = null;
         public Token Id;
         public Block Block;
 
-        public Decl(Block block, Token id)
+        public FnDecl(Block block, Token id)
         {
             Block = block;
             Id = id;
         }
-
-        abstract public void Show();
-        
-        public abstract void EmitForwardDeclaration(StreamWriter stream);
-        public abstract void EmitImplementation(StreamWriter stream);
-    }
-
-    public class FnDecl : Decl
-    {
-        public TypeSpec? ReturnType = null;
-        public List<Param> Params = new List<global::compiler2.ast.Param>();
-        public Block? Body = null;
-
-        public FnDecl(Block block, Token id) : base(block, id) {}
 
         public override bool Equals(object? obj)
         {
@@ -168,13 +157,13 @@ typedef int __ZERM__CInt32;
             return HashCode.Combine(Id, ReturnType);
         }
 
-        public override void Show()
+        public void Show()
         {
             Printer.Print(ToString());
             if (Body != null)
             {
                 Printer.Promote();
-                foreach (var decl in Body.Decls)
+                foreach (var decl in Body.FnDecls)
                     decl.Show();
                 foreach (var stmt in Body.Stmts)
                     stmt.Show();
@@ -195,7 +184,7 @@ typedef int __ZERM__CInt32;
                 stream.Write("void");
             else
                 ReturnType.Emit(stream);
-            stream.WriteLine();
+            stream.Write(' ');
 
             // Append __ZERM__ to the front of the identifier 
             // and also a return suffix because our languages counts 
@@ -218,18 +207,18 @@ typedef int __ZERM__CInt32;
             stream.Write(')');
         }
 
-        public override void EmitForwardDeclaration(StreamWriter stream)
+        public void EmitForwardDeclaration(StreamWriter stream)
         {
             EmitPrototype(stream);
-            stream.Write(';');
+            stream.WriteLine(";\n");
         }
 
-        public override void EmitImplementation(StreamWriter stream)
+        public void EmitImplementation(StreamWriter stream)
         {
             EmitPrototype(stream);
-            stream.Write('{');
+            stream.WriteLine('{');
             Body?.Emit(stream);
-            stream.Write('}');
+            stream.WriteLine("}\n");
         }
     }
 
@@ -272,8 +261,11 @@ typedef int __ZERM__CInt32;
 
         public override void Emit(StreamWriter stream)
         {
+            // Immutable borrow => const __ZERM__Type&
+            stream.Write("const ");
             stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
+            stream.Write('&');
         }
     }
 
@@ -301,7 +293,7 @@ typedef int __ZERM__CInt32;
         public void Emit(StreamWriter stream)
         {
             Type.Emit(stream);
-            stream.WriteLine();
+            stream.Write(' ');
             stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
         }
@@ -395,7 +387,6 @@ typedef int __ZERM__CInt32;
                     // Writes C++ code directly, like a macro.
                     foreach (var arg in Args)
                     {
-                        stream.WriteLine();
                         if (arg is StrExpr expr)
                             stream.Write(
                                 expr.Value.Text.Substring(1, expr.Value.Text.Length - 2));
@@ -460,6 +451,7 @@ typedef int __ZERM__CInt32;
             if (Value.Text.EndsWith("ci32"))
             {
                 // CInt32
+                stream.Write("(int)");
                 stream.Write(Value.Text.Substring(0, Value.Text.Length - 4));
             }
             else
@@ -490,7 +482,7 @@ typedef int __ZERM__CInt32;
 
         public override void Emit(StreamWriter stream)
         {
-
+            throw new NotImplementedException();
         }
     }
 
@@ -548,7 +540,19 @@ typedef int __ZERM__CInt32;
 
         public override void Emit(StreamWriter stream)
         {
-
+            stream.Write('(');
+            Lhs.Emit(stream);
+            switch (Op.Text)
+            {
+                case "+":
+                    stream.Write('+'); break;
+                case "-":
+                    stream.Write('-'); break;
+                case "*":
+                    stream.Write('*'); break;
+            }
+            Rhs.Emit(stream);
+            stream.Write(')');
         }
     }
 
@@ -575,7 +579,7 @@ typedef int __ZERM__CInt32;
 
         public override void Emit(StreamWriter stream)
         {
-
+            throw new NotImplementedException();
         }
     }
 }

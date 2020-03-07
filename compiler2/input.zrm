@@ -3,5 +3,5 @@ fn main() {
 }
 
 fn print1() {
-    print(1ci32);
+    print(5ci32 * 2ci32);
 }

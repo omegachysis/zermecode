@@ -1,3 +1,9 @@
 fn print(CInt32 x) {
     #cpp("std::cout << __ZERM__x;");
 }
+
+/*
+fn print(__ZERM__String str) {
+    #cpp("std::cout << __ZERM__str.");
+}
+*/
