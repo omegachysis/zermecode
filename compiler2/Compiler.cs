@@ -15,8 +15,12 @@ namespace compiler2
     {
         public const string Prefix = "__ZERM__";
 
+        public static ast.Program Ast = new ast.Program();
+
         public void Write(ast.Program ast, StreamWriter stream)
         {
+            Ast = ast;
+
             try
             {
                 ast.Emit(stream);
@@ -46,7 +50,7 @@ namespace compiler2
                 Body?.Emit(stream);
 
                 stream.Write(
-                    "\nint main(){__ZERM__main();}");
+                    "\nint main(){__ZERM__main__();}");
             }
         }
 
@@ -59,6 +63,28 @@ namespace compiler2
                 foreach (var stmt in Stmts)
                     stmt.Emit(stream);
             }
+
+            public FnDecl FindFn(FnCall call)
+            {
+                Console.WriteLine($"FindFn: {this}, {call}");
+
+                var matches = Decls.Where(x => x.Id.Text == call.Id.Text).ToList();
+                if (matches.Count == 0)
+                {
+                    if (Parent == null)
+                        throw new CompileError(call.Token,
+                            $"No matching function for {call}");
+
+                    return Parent.FindFn(call);
+                }
+                else if (matches.Count > 1)
+                {
+                    // TODO: do signature matching.
+                    throw new NotImplementedException();
+                }
+                else
+                    return (FnDecl)matches[0];
+            }
         }
 
         public partial class Decl
@@ -70,13 +96,20 @@ namespace compiler2
         {
             public override void Emit(StreamWriter stream)
             {
+                // Emit return type:
                 if (ReturnType == null)
                     stream.Write("void");
                 else
                     ReturnType.Emit(stream);
                 stream.WriteLine();
+
+                // Append __ZERM__ to the front of the identifier 
+                // and also a return suffix because our languages counts 
+                // return type in a function signature.
                 stream.Write("__ZERM__");
                 stream.Write(Id.Text);
+                stream.Write("__");
+                stream.Write(ReturnType?.ToString());
                 stream.Write('(');
 
                 foreach (var param in Params.Take(Params.Count - 1))
@@ -163,8 +196,14 @@ namespace compiler2
                 }
                 else
                 {
+                    // Try to find a matching function:
+                    var fn = Block.FindFn(this);
+
                     stream.Write(Compiler.Prefix);
                     stream.Write(Id.Text);
+                    // Functions also have suffixes relating to return type:
+                    stream.Write("__");
+                    stream.Write(fn.ReturnType?.ToString());
 
                     // Write function arguments:
                     stream.Write('(');

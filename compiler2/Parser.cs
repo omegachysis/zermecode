@@ -9,6 +9,8 @@ namespace compiler2
     public class Parser
     {
         private IEnumerator<Token>? tokens;
+        private Stack<Block> blocks = new Stack<Block>();
+        private Block? block => blocks.Count == 0 ? null : blocks.Peek();
 
         public ast.Program Parse(IEnumerator<Token> tokens)
         {
@@ -41,7 +43,7 @@ namespace compiler2
 
         private ast.Block ParseBlock()
         {
-            var block = new ast.Block();
+            blocks.Push(new ast.Block(tokens!.Current, block));
             while (true)
             {
                 var t = Next();
@@ -52,17 +54,13 @@ namespace compiler2
                     var fn = ParseFnDecl();
 
                     // Check uniqueness:
-                    if (block.Decls.Contains(fn))
+                    if (block!.Decls.Contains(fn))
                     {
                         throw new ParseError(fn.Id,
                             $"{fn} already declared in this scope");
                     }
 
                     block.Decls.Add(fn);
-                }
-                else if (t.Id == TokenId.End)
-                {
-                    return block;
                 }
                 else if (t.Id == TokenId.Id)
                 {
@@ -76,9 +74,9 @@ namespace compiler2
                         if (t2.Id != TokenId.Semi)
                             throw new ParseError(t2, "Expected ';'");
 
-                        var stmt = new ast.ExprStmt(fnCall);
+                        var stmt = new ast.ExprStmt(block!, fnCall);
                         stmt.Show();
-                        block.Stmts.Add(stmt);
+                        block!.Stmts.Add(stmt);
                     }
                     else if (t1.Id == TokenId.Eq)
                     {
@@ -89,12 +87,16 @@ namespace compiler2
                         if (la.Id != TokenId.Semi)
                             throw new ParseError(la, "Expected ';'");
 
-                        var assn = new ast.Assn(t, rhs);
+                        var assn = new ast.Assn(block!, t, rhs);
                         assn.Show();
-                        block.Stmts.Add(assn);
+                        block!.Stmts.Add(assn);
                     }
                     else
                         throw new NotImplementedException();
+                }
+                else if (t.Id == TokenId.End)
+                {
+                    return blocks.Pop();
                 }
                 else
                     throw new ParseError(t, "Expected '}', assignment, or statement.");
@@ -109,7 +111,7 @@ namespace compiler2
             Token t = Next();
             if (t.Id != TokenId.Id)
                 throw new ParseError(t, "Expected identifier");
-            var fn = new ast.FnDecl(t);
+            var fn = new ast.FnDecl(block!, t);
             var tId = t;
 
             t = Next();
@@ -182,7 +184,7 @@ namespace compiler2
                 }
             }
 
-            return new ast.FnCall(fnId)
+            return new ast.FnCall(block!, fnId)
             {
                 Args = args,
             };
@@ -199,7 +201,7 @@ namespace compiler2
                 la1.Text == "+" || la1.Text == "-"))
             {
                 var r = ParseTerm(Next(), out var la2);
-                term = new ast.AlgExpr(term, la1, r);
+                term = new ast.AlgExpr(block!, term, la1, r);
                 la1 = la2;
             }
 
@@ -218,7 +220,7 @@ namespace compiler2
                 la1.Text == "/" || la1.Text == "*"))
             {
                 var r = ParseFactor(Next(), out var la2);
-                term = new ast.AlgExpr(term, la1, r);
+                term = new ast.AlgExpr(block!, term, la1, r);
                 la1 = la2;
             }
 
@@ -245,20 +247,20 @@ namespace compiler2
                 {
                     // Variable.
                     la = t1;
-                    return new ast.VarExpr(t);
+                    return new ast.VarExpr(block!, t);
                 }
             }
             else if (t.Id == TokenId.Num)
             {
                 // Number literals.
                 la = Next();
-                return new ast.NumExpr(t);
+                return new ast.NumExpr(block!, t);
             }
             else if (t.Id == TokenId.Str)
             {
                 // String literals.
                 la = Next();
-                return new ast.StrExpr(t);
+                return new ast.StrExpr(block!, t);
             }
             else if (t.Id == TokenId.Op && t.Text == "-")
             {
@@ -267,7 +269,7 @@ namespace compiler2
                 la = la1;
                 var mult = t;
                 mult.Text = "*";
-                return new ast.AlgExpr(new ast.NumExpr(t), mult, negated);
+                return new ast.AlgExpr(block!, new ast.NumExpr(block!, t), mult, negated);
             }
             else if (t.Id == TokenId.LParen)
             {
@@ -365,26 +367,44 @@ namespace compiler2.ast
 
     public partial class Block
     {
+        public Token Token;
+
         public HashSet<Decl> Decls = new HashSet<global::compiler2.ast.Decl>();
         public List<Stmt> Stmts = new List<global::compiler2.ast.Stmt>();
+        public Block? Parent;
+
+        public Block(Token token, Block? parent)
+        {
+            Parent = parent;
+        }
+
+        public override string ToString()
+        {
+            return $"[Bl:{Token}]";
+        }
     }
 
     public abstract partial class Decl 
     {
+        public Token Id;
+        public Block Block;
+
+        public Decl(Block block, Token id)
+        {
+            Block = block;
+            Id = id;
+        }
+
         abstract public void Show();
     }
 
     public partial class FnDecl : Decl, IShowable
     {
-        public Token Id;
         public TypeSpec? ReturnType = null;
         public List<Param> Params = new List<global::compiler2.ast.Param>();
         public Block? Body = null;
 
-        public FnDecl(Token id)
-        {
-            Id = id;
-        }
+        public FnDecl(Block block, Token id) : base(block, id) {}
 
         public override bool Equals(object? obj)
         {
@@ -479,6 +499,13 @@ namespace compiler2.ast
 
     public abstract partial class Stmt : IShowable
     {
+        public Block Block;
+
+        public Stmt(Block block)
+        {
+            Block = block;
+        }
+
         abstract public void Show();
     }
 
@@ -486,7 +513,7 @@ namespace compiler2.ast
     {
         public Expr Expr;
 
-        public ExprStmt(Expr expr)
+        public ExprStmt(Block block, Expr expr) : base(block)
         {
             Expr = expr;
         }
@@ -504,6 +531,13 @@ namespace compiler2.ast
 
     public abstract partial class Expr : IShowable
     {
+        public Block Block;
+
+        public Expr(Block block)
+        {
+            Block = block;
+        }
+
         public abstract Token Token { get; }
 
         public abstract void Show();
@@ -516,7 +550,7 @@ namespace compiler2.ast
 
         public override Token Token => Id;
 
-        public FnCall(Token id)
+        public FnCall(Block block, Token id) : base(block)
         {
             Id = id;
         }
@@ -539,7 +573,7 @@ namespace compiler2.ast
         
         public override Token Token => Value;
 
-        public NumExpr(Token value)
+        public NumExpr(Block block, Token value) : base(block)
         {
             Value = value;
         }
@@ -561,7 +595,7 @@ namespace compiler2.ast
 
         public override Token Token => Value;
 
-        public VarExpr(Token value)
+        public VarExpr(Block block, Token value) : base(block)
         {
             Value = value;
         }
@@ -583,7 +617,7 @@ namespace compiler2.ast
 
         public override Token Token => Value;
 
-        public StrExpr(Token value)
+        public StrExpr(Block block, Token value) : base(block)
         {
             Value = value;
         }
@@ -607,7 +641,7 @@ namespace compiler2.ast
 
         public override Token Token => Lhs.Token;
 
-        public AlgExpr(Expr lhs, Token op, Expr rhs)
+        public AlgExpr(Block block, Expr lhs, Token op, Expr rhs) : base(block)
         {
             Lhs = lhs;
             Op = op;
@@ -630,7 +664,7 @@ namespace compiler2.ast
         public Token Id;
         public Expr Value;
 
-        public Assn(Token id, Expr value)
+        public Assn(Block block, Token id, Expr value) : base(block)
         {
             Id = id;
             Value = value;
