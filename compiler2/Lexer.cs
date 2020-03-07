@@ -111,6 +111,11 @@ namespace compiler2
                     yield return Finish();
                     yield return new Token(TokenId.Semi, line, col);
                 }
+                else if (c == ',')
+                {
+                    yield return Finish();
+                    yield return new Token(TokenId.Comma, line, col);
+                }
                 else if (c == '-')
                 {
                     yield return Finish();
@@ -175,6 +180,12 @@ namespace compiler2
                         {
                             builder.Append(c);
                             break;
+                        }
+                        else if (c == '\\')
+                        {
+                            builder.Append('\\');
+                            // Escaped character.
+                            builder.Append(Next());
                         }
                         else
                             builder.Append(c);

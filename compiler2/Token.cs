@@ -28,7 +28,7 @@ public struct Token
 
     public override string ToString()
     {
-        return $"({Id},{Text},{Line}:{Col})";
+        return $"({Id}    `{Text}`    {Line}:{Col})";
     }
 }
 

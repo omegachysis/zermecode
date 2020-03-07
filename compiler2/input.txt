@@ -1,4 +1,4 @@
 fn print(String text) {
-    #include("<iostream>");
-    //#cpp("std::cout << \"" + text + "\"");
+    #cpp("#include <iostream>");
+    #cpp("std::cout << \"", text, "\"");
 }
