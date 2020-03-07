@@ -168,6 +168,7 @@ namespace compiler2.ast
         public string ErrorMessage = string.Empty;
 
         public HashSet<Decl> Decls = new HashSet<Decl>();
+        public List<Stmt> Stmts = new List<Stmt>();
 
         public void Show()
         {
@@ -177,6 +178,10 @@ namespace compiler2.ast
                 Printer.Promote();
                 foreach (var decl in Decls)
                     decl.Show();
+                foreach (var stmt in Stmts)
+                    stmt.Show();
+
+                Printer.Demote();
             }
             else
             {
@@ -185,7 +190,7 @@ namespace compiler2.ast
         }
     }
 
-    public abstract class Decl : IShowable
+    public abstract class Decl 
     {
         abstract public void Show();
     }
@@ -195,6 +200,7 @@ namespace compiler2.ast
         public string Id = string.Empty;
         public TypeSpec? ReturnType = null;
         public List<Param> Params = new List<Param>();
+        public List<Stmt> Body = new List<Stmt>();
 
         public override bool Equals(object? obj)
         {
@@ -211,6 +217,10 @@ namespace compiler2.ast
         public override void Show()
         {
             Printer.Print(ToString());
+            Printer.Promote();
+            foreach (var stmt in Body)
+                stmt.Show();
+            Printer.Demote();
         }
 
         public override string ToString()
@@ -269,6 +279,28 @@ namespace compiler2.ast
         public override string ToString()
         {
             return $"SimpleTypeSpec({Id})";
+        }
+    }
+
+    public abstract class Stmt : IShowable
+    {
+        abstract public void Show();
+    }
+
+    public class FnCall : Stmt
+    {
+        public string Id = string.Empty;
+        public List<string> Args = new List<string>();
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            var args = string.Join(',', Args);
+            return $"FnCall({Id}({args}))";
         }
     }
 }

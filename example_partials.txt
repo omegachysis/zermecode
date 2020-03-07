@@ -1,0 +1,25 @@
+fn add(Num a, Num b) -> Num {
+    a + b
+}
+
+fn main() {
+    a = add(1, 2);
+    notice(a = 3);
+
+    b = add(1, _);
+    notice(b is Num -> Num);
+
+    c = add(1, _)(2);
+    notice(c = 3);
+
+    d = add {
+        a = 1; // Sets the first argument to 1
+        b = 2; // Sets the second argument to 2
+    }
+    notice(d = 3);
+
+    e = add {
+        b = 2;
+    }
+    notice(e is Num -> Num);
+}
