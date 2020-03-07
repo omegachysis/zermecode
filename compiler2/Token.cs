@@ -42,4 +42,5 @@ public enum TokenId
     Begin,
     End,
     RArrow,
+    Comma,
 }

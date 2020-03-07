@@ -1,11 +1,5 @@
-fn main() {
 
-}
-
-fn test() -> Int {
-
-}
-
-fn test() -> Nat {
-
+fn print(String text) {
+    //#include("<iostream>");
+    //#cpp("std::cout << \"" + text + "\"");
 }

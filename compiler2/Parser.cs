@@ -1,36 +1,36 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace compiler2
 {
     public class Parser
     {
         private IEnumerator<Token>? _tokens;
+        private ast.Program ast = new ast.Program();
 
         public ast.Program Parse(IEnumerator<Token> tokens)
         {
             _tokens = tokens;
 
-            var res = new ast.Program();
-
             try
             {
-                while (DoParse(res)) {}
+                while (DoParse()) {}
             }
             catch (Exception err)
             {
                 Console.WriteLine(err.ToString());
-                res.Success = false;
-                res.ErrorMessage = err.Message;
-                return res;
+                ast.Success = false;
+                ast.ErrorMessage = err.Message;
+                return ast;
             }
 
-            res.Success = true;
-            return res;
+            ast.Success = true;
+            return ast;
         }
 
-        private bool DoParse(ast.Program ast)
+        private bool DoParse()
         {
             var t = Next();
             if (t.Id == TokenId.Eof)
@@ -44,29 +44,45 @@ namespace compiler2
                 // Function ID:
                 t = Next();
                 if (t.Id != TokenId.Id)
-                    throw new ParseError(t);
+                    throw new ParseError(t, "Expected identifier");
                 decl.Id = t.Text;
                 var tId = t;
 
                 t = Next();
                 if (t.Id != TokenId.LParen)
-                    throw new ParseError(t);
+                    throw new ParseError(t, "Expected '('");
 
                 // Function arguments:
-                // TODO
+                var argIds = new HashSet<string>();
+                while (true)
+                {
+                    var typeSpec = TypeSpec();
+                    var argId = Next();
+                    if (argId.Id != TokenId.Id)
+                        throw new ParseError(argId, "Expected identifier");
+                    if (!argIds.Add(argId.Text))
+                        throw new ParseError(argId, "Argument already defined");
 
-                t = Next();
-                if (t.Id != TokenId.RParen)
-                    throw new ParseError(t);
+                    decl.Params.Add(new compiler2.ast.Param()
+                    {
+                        Type = typeSpec,
+                        Id = argId.Text,
+                    });
+
+                    t = Next();
+                    if (t.Id == TokenId.RParen)
+                        break;
+                    else if (t.Id == TokenId.Comma)
+                        continue;
+                    else
+                        new ParseError(t, "Expected ',' or ')'");
+                }
 
                 t = Next();
                 if (t.Id == TokenId.RArrow)
                 {
                     // Function return:
-                    var t1 = Next();
-                    if (t1.Id != TokenId.Id)
-                        throw new ParseError(t1);
-                    decl.Return = t1.Text;
+                    decl.ReturnType = TypeSpec();
 
                     t = Next();
                 }
@@ -75,18 +91,18 @@ namespace compiler2
                 if (ast.Decls.Contains(decl))
                 {
                     throw new ParseError(tId, 
-                        $"{decl} already declared in this scope.");
+                        $"{decl} already declared in this scope");
                 }
 
                 if (t.Id != TokenId.Begin)
-                    throw new ParseError(t);
+                    throw new ParseError(t, "Expected '{'");
 
                 // Function block:
                 // TODO
 
                 t = Next();
                 if (t.Id != TokenId.End)
-                    throw new ParseError(t);
+                    throw new ParseError(t, "Expected '}'");
 
                 ast.Decls.Add(decl);
             }
@@ -94,11 +110,20 @@ namespace compiler2
             return true;
         }
 
+        private ast.TypeSpec TypeSpec()
+        {
+            var t = Next();
+            if (t.Id != TokenId.Id)
+                throw new ParseError(t, "Expected identifier");
+            return new ast.SimpleTypeSpec(t.Text);
+        }
+
         private Token Next()
         {
             if (_tokens is null) throw new InvalidOperationException();
             var success = _tokens.MoveNext();
             if (!success) throw new NotImplementedException();
+            Console.WriteLine(" >> " + _tokens.Current);
             return _tokens.Current;
         }
     }
@@ -168,17 +193,19 @@ namespace compiler2.ast
     public class FnDecl : Decl, IShowable
     {
         public string Id = string.Empty;
-        public string Return = string.Empty;
+        public TypeSpec? ReturnType = null;
+        public List<Param> Params = new List<Param>();
 
         public override bool Equals(object? obj)
         {
             return obj is FnDecl decl &&
-                Id == decl.Id && Return == decl.Return;
+                Id == decl.Id && ReturnType == decl.ReturnType && 
+                Params.Select(x => x.Type).SequenceEqual(decl.Params.Select(x => x.Type));
         }
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Id, Return);
+            return HashCode.Combine(Id, ReturnType);
         }
 
         public override void Show()
@@ -188,7 +215,60 @@ namespace compiler2.ast
 
         public override string ToString()
         {
-            return $"FnDecl({Id} -> {Return})";
+            var args = string.Join(',', Params.Select(x => x.ToString()));
+            return $"FnDecl({Id}({args}) -> {ReturnType})";
+        }
+    }
+
+    public class Param : IShowable
+    {
+        public TypeSpec? Type = null;
+        public string Id = string.Empty;
+
+        public void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"Param({Type} {Id})";
+        }
+    }
+
+    public abstract class TypeSpec : IShowable
+    {
+        abstract public void Show();
+    }
+
+    public class SimpleTypeSpec : TypeSpec
+    {
+        public string Id = string.Empty;
+
+        public SimpleTypeSpec(string id)
+        {
+            Id = id;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is SimpleTypeSpec other && 
+                Id == other.Id;
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"SimpleTypeSpec({Id})";
         }
     }
 }

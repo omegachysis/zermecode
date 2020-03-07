@@ -102,6 +102,18 @@ namespace compiler2
                     else
                         throw new NotImplementedException();
                 }
+                else if (c == '/')
+                {
+                    yield return Finish(builder);
+                    c = Next();
+                    if (c == '/')
+                    {
+                        // Skip the rest of the line when we run into a comment.
+                        while (Next() != '\n') {};
+                    }
+                    else
+                        throw new NotImplementedException();
+                }
                 else
                 {
                     builder.Append(c);
