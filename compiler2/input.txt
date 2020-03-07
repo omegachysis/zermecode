@@ -1,5 +1,6 @@
 
 fn print(String text) {
+    test();
     //#include("<iostream>");
     //#cpp("std::cout << \"" + text + "\"");
 }

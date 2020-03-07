@@ -7,12 +7,12 @@ namespace compiler2
 {
     public class Parser
     {
-        private IEnumerator<Token>? _tokens;
-        private ast.Program ast = new ast.Program();
+        private IEnumerator<Token>? tokens;
 
         public ast.Program Parse(IEnumerator<Token> tokens)
         {
-            _tokens = tokens;
+            this.tokens = tokens;
+            var ast = new ast.Program();
 
             try
             {
@@ -20,7 +20,7 @@ namespace compiler2
                 if (t.Id != TokenId.Begin)
                     throw new InvalidOperationException();
 
-                ParseBlock();
+                ast.Body = ParseBlock();
 
                 t = Next();
                 if (t.Id != TokenId.Eof)
@@ -38,8 +38,9 @@ namespace compiler2
             return ast;
         }
 
-        private void ParseBlock()
+        private ast.Block ParseBlock()
         {
+            var block = new ast.Block();
             while (true)
             {
                 var t = Next();
@@ -47,13 +48,13 @@ namespace compiler2
                 // Function declaration:
                 if (t.Id == TokenId.Fn)
                 {
-                    var decl = new ast.FnDecl();
+                    var fn = new ast.FnDecl();
 
                     // Function ID:
                     t = Next();
                     if (t.Id != TokenId.Id)
                         throw new ParseError(t, "Expected identifier");
-                    decl.Id = t.Text;
+                    fn.Id = t.Text;
                     var tId = t;
 
                     t = Next();
@@ -71,7 +72,7 @@ namespace compiler2
                         if (!argIds.Add(argId.Text))
                             throw new ParseError(argId, "Argument already defined");
 
-                        decl.Params.Add(new compiler2.ast.Param()
+                        fn.Params.Add(new compiler2.ast.Param()
                         {
                             Type = typeSpec,
                             Id = argId.Text,
@@ -90,33 +91,73 @@ namespace compiler2
                     if (t.Id == TokenId.RArrow)
                     {
                         // Function return:
-                        decl.ReturnType = ParseTypeSpec();
+                        fn.ReturnType = ParseTypeSpec();
 
                         t = Next();
                     }
 
                     // Check uniqueness:
-                    if (ast.Decls.Contains(decl))
+                    if (block.Decls.Contains(fn))
                     {
                         throw new ParseError(tId, 
-                            $"{decl} already declared in this scope");
+                            $"{fn} already declared in this scope");
                     }
 
                     if (t.Id != TokenId.Begin)
                         throw new ParseError(t, "Expected '{'");
 
                     // Function block:
-                    ParseBlock();
+                    fn.Body = ParseBlock();
 
-                    ast.Decls.Add(decl);
+                    block.Decls.Add(fn);
                 }
                 else if (t.Id == TokenId.End)
                 {
-                    return;
+                    return block;
+                }
+                else if (t.Id == TokenId.Id)
+                {
+                    // Could be an assignment or a function call.
+                    var t1 = Next();
+                    if (t1.Id == TokenId.LParen)
+                    {
+                        // Function call.
+                        block.Stmts.Add(ParseFnCall(fnId: t));
+                    }
+                    else
+                        throw new NotImplementedException();
                 }
                 else
                     throw new ParseError(t, "Expected function declaration, statement, or '}'");
             }
+        }
+
+        private ast.FnCall ParseFnCall(Token fnId)
+        {
+            var args = new List<ast.Expr>();
+            while (true)
+            {
+                var t = Next();
+                if (t.Id == TokenId.RParen)
+                    break;
+                else
+                    args.Add(ParseExpr());
+            }
+
+            var t1 = Next();
+            if (t1.Id != TokenId.Semi)
+                throw new ParseError(t1, "Expected ';'");
+
+            return new ast.FnCall()
+            {
+                Id = fnId.Text,
+                Args = args,
+            };
+        }
+
+        private ast.Expr ParseExpr()
+        {
+            throw new NotImplementedException();
         }
 
         private ast.TypeSpec ParseTypeSpec()
@@ -129,12 +170,12 @@ namespace compiler2
 
         private Token Next()
         {
-            if (_tokens is null) throw new InvalidOperationException();
-            var success = _tokens.MoveNext();
+            if (tokens is null) throw new InvalidOperationException();
+            var success = tokens.MoveNext();
             if (!success)
                 return new Token(TokenId.Eof, 0, 0);
-            Console.WriteLine(" >> " + _tokens.Current);
-            return _tokens.Current;
+            Console.WriteLine(" >> " + tokens.Current);
+            return tokens.Current;
         }
     }
 
@@ -176,28 +217,34 @@ namespace compiler2.ast
     {
         public bool Success = false;
         public string ErrorMessage = string.Empty;
-
-        public HashSet<Decl> Decls = new HashSet<Decl>();
-        public List<Stmt> Stmts = new List<Stmt>();
+        public Block? Body = null;
 
         public void Show()
         {
             if (Success)
             {
                 Printer.Print("Program");
-                Printer.Promote();
-                foreach (var decl in Decls)
-                    decl.Show();
-                foreach (var stmt in Stmts)
-                    stmt.Show();
-
-                Printer.Demote();
+                if (Body != null)
+                {
+                    Printer.Promote();
+                    foreach (var decl in Body.Decls)
+                        decl.Show();
+                    foreach (var stmt in Body.Stmts)
+                        stmt.Show();
+                    Printer.Demote();
+                }
             }
             else
             {
                 Console.WriteLine("ERROR COMPILING THE PROGRAM");
             }
         }
+    }
+
+    public class Block
+    {
+        public HashSet<Decl> Decls = new HashSet<Decl>();
+        public List<Stmt> Stmts = new List<Stmt>();
     }
 
     public abstract class Decl 
@@ -210,7 +257,7 @@ namespace compiler2.ast
         public string Id = string.Empty;
         public TypeSpec? ReturnType = null;
         public List<Param> Params = new List<Param>();
-        public List<Stmt> Body = new List<Stmt>();
+        public Block? Body = null;
 
         public override bool Equals(object? obj)
         {
@@ -227,10 +274,15 @@ namespace compiler2.ast
         public override void Show()
         {
             Printer.Print(ToString());
-            Printer.Promote();
-            foreach (var stmt in Body)
-                stmt.Show();
-            Printer.Demote();
+            if (Body != null)
+            {
+                Printer.Promote();
+                foreach (var decl in Body.Decls)
+                    decl.Show();
+                foreach (var stmt in Body.Stmts)
+                    stmt.Show();
+                Printer.Demote();
+            }
         }
 
         public override string ToString()
@@ -300,7 +352,7 @@ namespace compiler2.ast
     public class FnCall : Stmt
     {
         public string Id = string.Empty;
-        public List<string> Args = new List<string>();
+        public List<Expr> Args = new List<Expr>();
 
         public override void Show()
         {
@@ -309,8 +361,13 @@ namespace compiler2.ast
 
         public override string ToString()
         {
-            var args = string.Join(',', Args);
+            var args = string.Join(',', Args.Select(x => x.ToString()));
             return $"FnCall({Id}({args}))";
         }
+    }
+
+    public abstract class Expr : IShowable
+    {
+        public abstract void Show();
     }
 }

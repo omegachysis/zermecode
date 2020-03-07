@@ -8,13 +8,13 @@ namespace compiler2
 {
     public class Lexer
     {
-        private readonly StreamReader _stream;
-        private int Line = 1;
-        private int Col = 0;
+        private readonly StreamReader stream;
+        private int line = 1;
+        private int col = 0;
 
         public Lexer(StreamReader stream)
         {
-            _stream = stream;
+            this.stream = stream;
         }
 
         public IEnumerable<Token> Tokens()
@@ -28,8 +28,8 @@ namespace compiler2
 
         private char Next()
         {
-            var next = _stream.Read();
-            Col += 1;
+            var next = stream.Read();
+            col += 1;
             if (next == -1)
                 throw new InvalidOperationException();
 
@@ -42,12 +42,12 @@ namespace compiler2
             yield return new Token(TokenId.Begin, 0, 0);
 
             while (true) {
-                var next = _stream.Read();
-                Col += 1;
+                var next = stream.Read();
+                col += 1;
                 if (next == -1)
                 {
                     yield return Finish(builder);
-                    yield return new Token(TokenId.End, Line, Col);
+                    yield return new Token(TokenId.End, line, col);
                     break;
                 }
                 
@@ -56,13 +56,13 @@ namespace compiler2
                 if (c == '\t')
                 {
                     yield return Finish(builder);
-                    Col += 3;
+                    col += 3;
                 }
                 else if (c == '\n')
                 {
                     yield return Finish(builder);
-                    Line += 1;
-                    Col = 0;
+                    line += 1;
+                    col = 0;
                 }
                 else if (c == ' ')
                 {
@@ -70,27 +70,31 @@ namespace compiler2
                 }
                 else if (c == '\r') 
                 { 
-                    Col -= 1; 
+                    col -= 1; 
                 }
                 else if (c == '(')
                 {
                     yield return Finish(builder);
-                    yield return new Token(TokenId.LParen, Line, Col);
+                    yield return new Token(TokenId.LParen, line, col);
                 }
                 else if (c == ')')
                 {
                     yield return Finish(builder);
-                    yield return new Token(TokenId.RParen, Line, Col);
+                    yield return new Token(TokenId.RParen, line, col);
                 }
                 else if (c == '{')
                 {
                     yield return Finish(builder);
-                    yield return new Token(TokenId.Begin, Line, Col);
+                    yield return new Token(TokenId.Begin, line, col);
                 }
                 else if (c == '}')
                 {
                     yield return Finish(builder);
-                    yield return new Token(TokenId.End, Line, Col);
+                    yield return new Token(TokenId.End, line, col);
+                }
+                else if (c == ';')
+                {
+                    yield return new Token(TokenId.Semi, line, col);
                 }
                 else if (c == '-')
                 {
@@ -98,7 +102,7 @@ namespace compiler2
                     c = Next();
                     if (c == '>')
                     {
-                        yield return new Token(TokenId.RArrow, Line, Col);
+                        yield return new Token(TokenId.RArrow, line, col);
                     }
                     else
                         throw new NotImplementedException();
@@ -129,9 +133,9 @@ namespace compiler2
             if (t.Length == 0) return null;
             builder.Clear();
             if (t == "fn")
-                return new Token(TokenId.Fn, string.Empty, Line, Col - t.Length);
+                return new Token(TokenId.Fn, string.Empty, line, col - t.Length);
             else
-                return new Token(TokenId.Id, t, Line, Col - t.Length);
+                return new Token(TokenId.Id, t, line, col - t.Length);
         }
     }
 }
