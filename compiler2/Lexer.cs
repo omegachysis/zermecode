@@ -121,7 +121,7 @@ namespace compiler2
                     }
                     else
                     {
-                        yield return new Token(TokenId.Operator, "-", line, col - 1);
+                        yield return new Token(TokenId.Op, "-", line, col - 1);
                         goto Backtrack;
                     }
                 }
@@ -149,19 +149,19 @@ namespace compiler2
                     }
                     else
                     {
-                        yield return new Token(TokenId.Operator, "/", line, col - 1);
+                        yield return new Token(TokenId.Op, "/", line, col - 1);
                         goto Backtrack;
                     }
                 }
                 else if (c == '=')
                 {
                     yield return Finish();
-                    yield return new Token(TokenId.Equal, line, col);
+                    yield return new Token(TokenId.Eq, line, col);
                 }
                 else if (c == '*' || c == '+' || c == '-' || c == '^')
                 {
                     yield return Finish();
-                    yield return new Token(TokenId.Operator, c.ToString(), line, col);
+                    yield return new Token(TokenId.Op, c.ToString(), line, col);
                 }
                 else if (char.IsDigit(c))
                 {
@@ -198,7 +198,7 @@ namespace compiler2
             if (t == "fn")
                 return new Token(TokenId.Fn, string.Empty, line, col - t.Length);
             else if (char.IsDigit(t[0]))
-                return new Token(TokenId.Number, t, line, col - t.Length);
+                return new Token(TokenId.Num, t, line, col - t.Length);
             else
                 return new Token(TokenId.Id, t, line, col - t.Length);
         }

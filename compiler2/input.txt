@@ -1,12 +1,6 @@
 
 
-fn main() {
-    x = main() + 1;
-}
-
-fn main() -> Int {
-
-}
+x = -5 * -5;
 
 /*
 

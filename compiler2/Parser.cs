@@ -80,7 +80,7 @@ namespace compiler2
                         stmt.Show();
                         block.Stmts.Add(stmt);
                     }
-                    else if (t1.Id == TokenId.Equal)
+                    else if (t1.Id == TokenId.Eq)
                     {
                         // Assignment.
                         Console.WriteLine("Assignment");
@@ -187,7 +187,7 @@ namespace compiler2
             var l = ParseTerm(t, out var la1);
             var term = l;
 
-            while (la1.Id == TokenId.Operator && (
+            while (la1.Id == TokenId.Op && (
                 la1.Text == "+" || la1.Text == "-"))
             {
                 var r = ParseTerm(Next(), out var la2);
@@ -206,7 +206,7 @@ namespace compiler2
             var l = ParseFactor(t, out var la1);
             var term = l;
 
-            while (la1.Id == TokenId.Operator && (
+            while (la1.Id == TokenId.Op && (
                 la1.Text == "/" || la1.Text == "*"))
             {
                 var r = ParseFactor(Next(), out var la2);
@@ -240,10 +240,18 @@ namespace compiler2
                     return new ast.VarExpr(t);
                 }
             }
-            else if (t.Id == TokenId.Number)
+            else if (t.Id == TokenId.Num)
             {
                 la = Next();
                 return new ast.NumExpr(t);
+            }
+            else if (t.Id == TokenId.Op && t.Text == "-")
+            {
+                var negated = ParseFactor(Next(), out var la1);
+                la = la1;
+                var mult = t;
+                mult.Text = "*";
+                return new ast.AlgExpr(new ast.NumExpr(t), mult, negated);
             }
             else
                 throw new ParseError(t, "Expected identifier or literal");
