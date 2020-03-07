@@ -336,7 +336,7 @@ namespace compiler2.ast
         void Show();
     }
 
-    public class Program : IShowable
+    public partial class Program : IShowable
     {
         public bool Success = false;
         public string ErrorMessage = string.Empty;
@@ -363,18 +363,18 @@ namespace compiler2.ast
         }
     }
 
-    public class Block
+    public partial class Block
     {
         public HashSet<Decl> Decls = new HashSet<global::compiler2.ast.Decl>();
         public List<Stmt> Stmts = new List<global::compiler2.ast.Stmt>();
     }
 
-    public abstract class Decl 
+    public abstract partial class Decl 
     {
         abstract public void Show();
     }
 
-    public class FnDecl : Decl, IShowable
+    public partial class FnDecl : Decl, IShowable
     {
         public Token Id;
         public TypeSpec? ReturnType = null;
@@ -419,7 +419,7 @@ namespace compiler2.ast
         }
     }
 
-    public class Param : IShowable
+    public partial class Param : IShowable
     {
         public TypeSpec Type;
         public Token Id;
@@ -441,12 +441,12 @@ namespace compiler2.ast
         }
     }
 
-    public abstract class TypeSpec : IShowable
+    public abstract partial class TypeSpec : IShowable
     {
         abstract public void Show();
     }
 
-    public class SimpleTypeSpec : TypeSpec
+    public partial class SimpleTypeSpec : TypeSpec
     {
         public Token Id;
 
@@ -477,12 +477,12 @@ namespace compiler2.ast
         }
     }
 
-    public abstract class Stmt : IShowable
+    public abstract partial class Stmt : IShowable
     {
         abstract public void Show();
     }
 
-    public class ExprStmt : Stmt
+    public partial class ExprStmt : Stmt
     {
         public Expr Expr;
 
@@ -502,15 +502,19 @@ namespace compiler2.ast
         }
     }
 
-    public abstract class Expr : IShowable
+    public abstract partial class Expr : IShowable
     {
+        public abstract Token Token { get; }
+
         public abstract void Show();
     }
 
-    public class FnCall : Expr
+    public partial class FnCall : Expr
     {
         public Token Id;
         public List<Expr> Args = new List<global::compiler2.ast.Expr>();
+
+        public override Token Token => Id;
 
         public FnCall(Token id)
         {
@@ -529,9 +533,11 @@ namespace compiler2.ast
         }
     }
 
-    public class NumExpr : Expr
+    public partial class NumExpr : Expr
     {
         public Token Value;
+        
+        public override Token Token => Value;
 
         public NumExpr(Token value)
         {
@@ -549,9 +555,11 @@ namespace compiler2.ast
         }
     }
     
-    public class VarExpr : Expr
+    public partial class VarExpr : Expr
     {
         public Token Value;
+
+        public override Token Token => Value;
 
         public VarExpr(Token value)
         {
@@ -569,9 +577,11 @@ namespace compiler2.ast
         }
     }
 
-    public class StrExpr : Expr
+    public partial class StrExpr : Expr
     {
         public Token Value;
+
+        public override Token Token => Value;
 
         public StrExpr(Token value)
         {
@@ -589,11 +599,13 @@ namespace compiler2.ast
         }
     }
 
-    public class AlgExpr : Expr
+    public partial class AlgExpr : Expr
     {
         public Expr Lhs;
         public Token Op;
         public Expr Rhs;
+
+        public override Token Token => Lhs.Token;
 
         public AlgExpr(Expr lhs, Token op, Expr rhs)
         {
@@ -613,7 +625,7 @@ namespace compiler2.ast
         }
     }
 
-    public class Assn : Stmt
+    public partial class Assn : Stmt
     {
         public Token Id;
         public Expr Value;

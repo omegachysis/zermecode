@@ -1,4 +1,7 @@
-fn print(String text) {
-    #cpp("#include <iostream>");
-    #cpp("std::cout << \"", text, "\"");
+fn print(CInt32 x) {
+    #cpp("std::cout << __ZERM__x;");
+}
+
+fn main() {
+    print(1CI32);
 }
