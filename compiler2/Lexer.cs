@@ -39,6 +39,7 @@ namespace compiler2
         private IEnumerable<Token?> RawTokens()
         {
             var builder = new StringBuilder();
+            yield return new Token(TokenId.Begin, 0, 0);
 
             while (true) {
                 var next = _stream.Read();
@@ -46,7 +47,7 @@ namespace compiler2
                 if (next == -1)
                 {
                     yield return Finish(builder);
-                    yield return new Token(TokenId.Eof, Line, Col);
+                    yield return new Token(TokenId.End, Line, Col);
                     break;
                 }
                 

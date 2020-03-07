@@ -16,9 +16,17 @@ namespace compiler2
 
             try
             {
-                while (DoParse()) {}
+                var t = Next();
+                if (t.Id != TokenId.Begin)
+                    throw new InvalidOperationException();
+
+                Block();
+
+                t = Next();
+                if (t.Id != TokenId.Eof)
+                    throw new ParseError(t, "Expected end of file");
             }
-            catch (Exception err)
+            catch (ParseError err)
             {
                 Console.WriteLine(err.ToString());
                 ast.Success = false;
@@ -30,84 +38,85 @@ namespace compiler2
             return ast;
         }
 
-        private bool DoParse()
+        private void Block()
         {
-            var t = Next();
-            if (t.Id == TokenId.Eof)
-                return false;
-
-            // Function declaration:
-            if (t.Id == TokenId.Fn)
+            while (true)
             {
-                var decl = new ast.FnDecl();
+                var t = Next();
 
-                // Function ID:
-                t = Next();
-                if (t.Id != TokenId.Id)
-                    throw new ParseError(t, "Expected identifier");
-                decl.Id = t.Text;
-                var tId = t;
-
-                t = Next();
-                if (t.Id != TokenId.LParen)
-                    throw new ParseError(t, "Expected '('");
-
-                // Function arguments:
-                var argIds = new HashSet<string>();
-                while (true)
+                // Function declaration:
+                if (t.Id == TokenId.Fn)
                 {
-                    var typeSpec = TypeSpec();
-                    var argId = Next();
-                    if (argId.Id != TokenId.Id)
-                        throw new ParseError(argId, "Expected identifier");
-                    if (!argIds.Add(argId.Text))
-                        throw new ParseError(argId, "Argument already defined");
+                    var decl = new ast.FnDecl();
 
-                    decl.Params.Add(new compiler2.ast.Param()
+                    // Function ID:
+                    t = Next();
+                    if (t.Id != TokenId.Id)
+                        throw new ParseError(t, "Expected identifier");
+                    decl.Id = t.Text;
+                    var tId = t;
+
+                    t = Next();
+                    if (t.Id != TokenId.LParen)
+                        throw new ParseError(t, "Expected '('");
+
+                    // Function arguments:
+                    var argIds = new HashSet<string>();
+                    while (true)
                     {
-                        Type = typeSpec,
-                        Id = argId.Text,
-                    });
+                        var typeSpec = TypeSpec();
+                        var argId = Next();
+                        if (argId.Id != TokenId.Id)
+                            throw new ParseError(argId, "Expected identifier");
+                        if (!argIds.Add(argId.Text))
+                            throw new ParseError(argId, "Argument already defined");
+
+                        decl.Params.Add(new compiler2.ast.Param()
+                        {
+                            Type = typeSpec,
+                            Id = argId.Text,
+                        });
+
+                        t = Next();
+                        if (t.Id == TokenId.RParen)
+                            break;
+                        else if (t.Id == TokenId.Comma)
+                            continue;
+                        else
+                            new ParseError(t, "Expected ',' or ')'");
+                    }
 
                     t = Next();
-                    if (t.Id == TokenId.RParen)
-                        break;
-                    else if (t.Id == TokenId.Comma)
-                        continue;
-                    else
-                        new ParseError(t, "Expected ',' or ')'");
-                }
+                    if (t.Id == TokenId.RArrow)
+                    {
+                        // Function return:
+                        decl.ReturnType = TypeSpec();
 
-                t = Next();
-                if (t.Id == TokenId.RArrow)
+                        t = Next();
+                    }
+
+                    // Check uniqueness:
+                    if (ast.Decls.Contains(decl))
+                    {
+                        throw new ParseError(tId, 
+                            $"{decl} already declared in this scope");
+                    }
+
+                    if (t.Id != TokenId.Begin)
+                        throw new ParseError(t, "Expected '{'");
+
+                    // Function block:
+                    Block();
+
+                    ast.Decls.Add(decl);
+                }
+                else if (t.Id == TokenId.End)
                 {
-                    // Function return:
-                    decl.ReturnType = TypeSpec();
-
-                    t = Next();
+                    return;
                 }
-
-                // Check uniqueness:
-                if (ast.Decls.Contains(decl))
-                {
-                    throw new ParseError(tId, 
-                        $"{decl} already declared in this scope");
-                }
-
-                if (t.Id != TokenId.Begin)
-                    throw new ParseError(t, "Expected '{'");
-
-                // Function block:
-                // TODO
-
-                t = Next();
-                if (t.Id != TokenId.End)
-                    throw new ParseError(t, "Expected '}'");
-
-                ast.Decls.Add(decl);
+                else
+                    throw new ParseError(t, "Expected function declaration, statement, or '}'");
             }
-
-            return true;
         }
 
         private ast.TypeSpec TypeSpec()
@@ -122,7 +131,8 @@ namespace compiler2
         {
             if (_tokens is null) throw new InvalidOperationException();
             var success = _tokens.MoveNext();
-            if (!success) throw new NotImplementedException();
+            if (!success)
+                return new Token(TokenId.Eof, 0, 0);
             Console.WriteLine(" >> " + _tokens.Current);
             return _tokens.Current;
         }
