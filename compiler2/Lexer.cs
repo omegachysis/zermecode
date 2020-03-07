@@ -145,12 +145,20 @@ namespace compiler2
                         }
                     }
                     else
-                        throw new NotImplementedException();
+                    {
+                        yield return new Token(TokenId.Operator, "/", line, col - 1);
+                        goto Backtrack;
+                    }
                 }
                 else if (c == '=')
                 {
                     yield return Finish();
                     yield return new Token(TokenId.Equal, line, col);
+                }
+                else if (c == '*' || c == '+' || c == '-' || c == '^')
+                {
+                    yield return Finish();
+                    yield return new Token(TokenId.Operator, c.ToString(), line, col);
                 }
                 else if (char.IsDigit(c))
                 {

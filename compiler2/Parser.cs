@@ -137,10 +137,9 @@ namespace compiler2
                         // Assignment.
                         Console.WriteLine("Assignment");
 
-                        var rhs = ParseExpr(Next());
-                        var t2 = Next();
-                        if (t2.Id != TokenId.Semi)
-                            throw new ParseError(t2, "Expected ';'");
+                        var rhs = ParseExpr(Next(), out var la);
+                        if (la.Id != TokenId.Semi)
+                            throw new ParseError(la, "Expected ';'");
 
                         var assn = new ast.Assn(t.Text, rhs);
                         assn.Show();
@@ -175,9 +174,47 @@ namespace compiler2
             };
         }
 
-        private ast.Expr ParseExpr(Token t)
+        private ast.Expr ParseExpr(Token t, out Token la)
         {
             Console.WriteLine("Expr");
+
+            var l = ParseTerm(t, out var la1);
+            var term = l;
+
+            while (la1.Id == TokenId.Operator && (
+                la1.Text == "+" || la1.Text == "-"))
+            {
+                var r = ParseTerm(Next(), out var la2);
+                term = new ast.AlgExpr(term, la1, r);
+                la1 = la2;
+            }
+
+            la = la1;
+            return term;
+        }
+
+        private ast.Expr ParseTerm(Token t, out Token la)
+        {
+            Console.WriteLine("Term");
+
+            var l = ParseFactor(t, out var la1);
+            var term = l;
+
+            while (la1.Id == TokenId.Operator && (
+                la1.Text == "/" || la1.Text == "*"))
+            {
+                var r = ParseFactor(Next(), out var la2);
+                term = new ast.AlgExpr(term, la1, r);
+                la1 = la2;
+            }
+
+            la = la1;
+            return term;
+        }
+
+        private ast.Expr ParseFactor(Token t, out Token la)
+        {
+            Console.WriteLine("Factor");
 
             if (t.Id == TokenId.Id)
             {
@@ -187,17 +224,23 @@ namespace compiler2
                 {
                     // Function call.
                     var fnCall = ParseFnCall(fnId: t);
+                    la = Next();
                     return fnCall;
                 }
                 else
-                    throw new NotImplementedException();
+                {
+                    // Variable.
+                    la = t1;
+                    return new ast.VarExpr(t);
+                }
             }
             else if (t.Id == TokenId.Number)
             {
-                return new ast.Number(t.Text);
+                la = Next();
+                return new ast.NumExpr(t.Text);
             }
             else
-                throw new ParseError(t, "Expected identifier");
+                throw new ParseError(t, "Expected identifier or literal");
         }
 
         private ast.TypeSpec ParseTypeSpec()
@@ -430,11 +473,11 @@ namespace compiler2.ast
         }
     }
 
-    public class Number : Expr
+    public class NumExpr : Expr
     {
         public string Value;
 
-        public Number(string value)
+        public NumExpr(string value)
         {
             Value = value;
         }
@@ -447,6 +490,50 @@ namespace compiler2.ast
         public override string ToString()
         {
             return $"[N:{Value}]";
+        }
+    }
+    
+    public class VarExpr : Expr
+    {
+        public Token Value;
+
+        public VarExpr(Token value)
+        {
+            Value = value;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[V:{Value.Text}]";
+        }
+    }
+
+    public class AlgExpr : Expr
+    {
+        public Expr Lhs;
+        public Token Op;
+        public Expr Rhs;
+
+        public AlgExpr(Expr lhs, Token op, Expr rhs)
+        {
+            Lhs = lhs;
+            Op = op;
+            Rhs = rhs;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[{Lhs}{Op.Text}{Rhs}]";
         }
     }
 
@@ -468,7 +555,7 @@ namespace compiler2.ast
 
         public override string ToString()
         {
-            return $"[A:{Id} = {Value})]";
+            return $"[A:{Id} = {Value}]";
         }
     }
 }

@@ -46,4 +46,5 @@ public enum TokenId
     Semi,
     Number,
     Equal,
+    Operator,
 }
