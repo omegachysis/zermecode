@@ -1,6 +1,6 @@
 type Shape {
     fn draw(Ctx&);
-    fn &translate(Real x, Real y);
+    fn translate&(Real x, Real y);
 }
 
 type Point : Shape {
@@ -9,7 +9,7 @@ type Point : Shape {
 
     fn draw(Ctx& ctx) { /* ... */ }
 
-    fn &translate(Real x, Real y) {
+    fn translate&(Real x, Real y) {
         this.x += x;
         this.y += y;
     }
@@ -34,12 +34,12 @@ type Rectangle : Shape {
 
     fn draw(Ctx& ctx) { /* ... */ }
 
-    fn &translate(Real x, Real y) {
+    fn translate&(Real x, Real y) {
         this.centerX += x;
         this.centerY += y;
     }
 
-    fn &scale(Real x, Real y) {
+    fn scale&(Real x, Real y) {
         assume(x > 0);
         assume(y > 0);
         this._width *= x;
