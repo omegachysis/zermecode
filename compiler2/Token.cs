@@ -41,4 +41,5 @@ public enum TokenId
     RParen,
     Begin,
     End,
+    RArrow,
 }

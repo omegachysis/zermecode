@@ -26,6 +26,16 @@ namespace compiler2
             }
         }
 
+        private char Next()
+        {
+            var next = _stream.Read();
+            Col += 1;
+            if (next == -1)
+                throw new InvalidOperationException();
+
+            return (char)next;
+        }
+
         private IEnumerable<Token?> RawTokens()
         {
             var builder = new StringBuilder();
@@ -80,6 +90,17 @@ namespace compiler2
                 {
                     yield return Finish(builder);
                     yield return new Token(TokenId.End, Line, Col);
+                }
+                else if (c == '-')
+                {
+                    yield return Finish(builder);
+                    c = Next();
+                    if (c == '>')
+                    {
+                        yield return new Token(TokenId.RArrow, Line, Col);
+                    }
+                    else
+                        throw new NotImplementedException();
                 }
                 else
                 {

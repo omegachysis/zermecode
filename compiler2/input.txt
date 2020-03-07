@@ -2,8 +2,10 @@ fn main() {
 
 }
 
-fn main() {
+fn test() -> Int {
 
 }
 
-fn test() { }
+fn test() -> Nat {
+    
+}
