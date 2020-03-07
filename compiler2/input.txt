@@ -7,5 +7,5 @@ fn test() -> Int {
 }
 
 fn test() -> Nat {
-    
+
 }

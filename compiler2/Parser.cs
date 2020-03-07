@@ -16,67 +16,7 @@ namespace compiler2
 
             try
             {
-                while (true)
-                {
-                    var t = Next();
-                    if (t.Id == TokenId.Eof)
-                        break;
-
-                    // Function declaration:
-                    if (t.Id == TokenId.Fn)
-                    {
-                        var decl = new ast.FnDecl();
-
-                        // Function ID:
-                        t = Next();
-                        if (t.Id != TokenId.Id)
-                            throw new ParseError(t);
-                        decl.Id = t.Text;
-                        var tId = t;
-
-                        t = Next();
-                        if (t.Id != TokenId.LParen)
-                            throw new ParseError(t);
-
-                        // Function arguments:
-                        // TODO
-
-                        t = Next();
-                        if (t.Id != TokenId.RParen)
-                            throw new ParseError(t);
-
-                        t = Next();
-                        if (t.Id == TokenId.RArrow)
-                        {
-                            // Function return:
-                            var t1 = Next();
-                            if (t1.Id != TokenId.Id)
-                                throw new ParseError(t1);
-                            decl.Return = t1.Text;
-
-                            t = Next();
-                        }
-
-                        // Check uniqueness:
-                        if (res.Decls.Contains(decl))
-                        {
-                            throw new ParseError(tId, 
-                                $"{decl} already declared in this scope.");
-                        }
-
-                        if (t.Id != TokenId.Begin)
-                            throw new ParseError(t);
-
-                        // Function block:
-                        // TODO
-
-                        t = Next();
-                        if (t.Id != TokenId.End)
-                            throw new ParseError(t);
-
-                        res.Decls.Add(decl);
-                    }
-                }
+                while (DoParse(res)) {}
             }
             catch (Exception err)
             {
@@ -88,6 +28,70 @@ namespace compiler2
 
             res.Success = true;
             return res;
+        }
+
+        private bool DoParse(ast.Program ast)
+        {
+            var t = Next();
+            if (t.Id == TokenId.Eof)
+                return false;
+
+            // Function declaration:
+            if (t.Id == TokenId.Fn)
+            {
+                var decl = new ast.FnDecl();
+
+                // Function ID:
+                t = Next();
+                if (t.Id != TokenId.Id)
+                    throw new ParseError(t);
+                decl.Id = t.Text;
+                var tId = t;
+
+                t = Next();
+                if (t.Id != TokenId.LParen)
+                    throw new ParseError(t);
+
+                // Function arguments:
+                // TODO
+
+                t = Next();
+                if (t.Id != TokenId.RParen)
+                    throw new ParseError(t);
+
+                t = Next();
+                if (t.Id == TokenId.RArrow)
+                {
+                    // Function return:
+                    var t1 = Next();
+                    if (t1.Id != TokenId.Id)
+                        throw new ParseError(t1);
+                    decl.Return = t1.Text;
+
+                    t = Next();
+                }
+
+                // Check uniqueness:
+                if (ast.Decls.Contains(decl))
+                {
+                    throw new ParseError(tId, 
+                        $"{decl} already declared in this scope.");
+                }
+
+                if (t.Id != TokenId.Begin)
+                    throw new ParseError(t);
+
+                // Function block:
+                // TODO
+
+                t = Next();
+                if (t.Id != TokenId.End)
+                    throw new ParseError(t);
+
+                ast.Decls.Add(decl);
+            }
+
+            return true;
         }
 
         private Token Next()
