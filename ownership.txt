@@ -1,0 +1,17 @@
+
+Int     Immutable borrow of Int
+&Int    Mutable borrow of Int
+*Int    Transfer of Int
+
+Int&    Immutable borrow of immutable Int reference
+&Int&   Mutable borrow of immutable Int reference
+*Int&   Transfer of immutable Int reference
+
+Int*    Immutable borrow of mutable Int reference
+&Int*   Mutable borrow of mutable Int reference 
+*Int*   Transfer of mutable Int reference
+
+Int&&   Immutable borrow of immutable reference to immutable Int reference
+Int&*   Immutable borrow of immutable reference to mutable Int reference
+Int**   Immutable borrow of mutable reference to mutable Int reference
+Int*&   Immutable borrow of mutable reference to immutable Int reference

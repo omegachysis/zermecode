@@ -1,0 +1,46 @@
+
+type Engine {
+    Scene&? scene ?:= None;
+
+    fn draw() {
+        gl.Clear();
+        scene?.draw();
+    }
+}
+
+type Scene {
+    String name = _;
+    _actors := Set<Actor>();
+
+    fn draw() {
+        for (actor in _actors) {
+            actor.draw();
+        }
+    }
+
+    fn &add(*Actor actor) {
+        _actors.add(actor);
+    }
+    // alternate way:
+    fn &add = _actors.add;
+
+    fn &remove(Actor& actor) {
+        _actors.remove(actor);
+    }
+}
+
+type Actor {
+    fn draw() { /* ... */ }
+}
+
+fn main() {
+    engine := Engine();
+    scene := Scene("My Scene");
+    engine.scene = scene;
+
+    actor1 = Actor();
+    scene.add(actor1);
+    scene.remove(actor1);
+
+    engine.scene = None;
+}
