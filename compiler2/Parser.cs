@@ -20,7 +20,7 @@ namespace compiler2
                 if (t.Id != TokenId.Begin)
                     throw new InvalidOperationException();
 
-                Block();
+                ParseBlock();
 
                 t = Next();
                 if (t.Id != TokenId.Eof)
@@ -38,7 +38,7 @@ namespace compiler2
             return ast;
         }
 
-        private void Block()
+        private void ParseBlock()
         {
             while (true)
             {
@@ -64,7 +64,7 @@ namespace compiler2
                     var argIds = new HashSet<string>();
                     while (true)
                     {
-                        var typeSpec = TypeSpec();
+                        var typeSpec = ParseTypeSpec();
                         var argId = Next();
                         if (argId.Id != TokenId.Id)
                             throw new ParseError(argId, "Expected identifier");
@@ -90,7 +90,7 @@ namespace compiler2
                     if (t.Id == TokenId.RArrow)
                     {
                         // Function return:
-                        decl.ReturnType = TypeSpec();
+                        decl.ReturnType = ParseTypeSpec();
 
                         t = Next();
                     }
@@ -106,7 +106,7 @@ namespace compiler2
                         throw new ParseError(t, "Expected '{'");
 
                     // Function block:
-                    Block();
+                    ParseBlock();
 
                     ast.Decls.Add(decl);
                 }
@@ -119,7 +119,7 @@ namespace compiler2
             }
         }
 
-        private ast.TypeSpec TypeSpec()
+        private ast.TypeSpec ParseTypeSpec()
         {
             var t = Next();
             if (t.Id != TokenId.Id)
