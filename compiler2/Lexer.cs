@@ -227,6 +227,10 @@ namespace compiler2
             builder.Clear();
             if (t == "fn")
                 return new Token(TokenId.Fn, string.Empty, line, col - t.Length);
+            else if (t == "return")
+                return new Token(TokenId.Return, string.Empty, line, col - t.Length);
+            else if (t == "type")
+                return new Token(TokenId.Type, string.Empty, line, col - t.Length);
             else if (char.IsDigit(t[0]))
                 return new Token(TokenId.Num, t, line, col - t.Length);
             else if (t[0] == '"')

@@ -70,7 +70,8 @@ namespace compiler2.ast
             // Emit a preamble to wrap C++:
             stream.Write(
 @"#include <iostream>
-typedef int __ZERM__CInt32;
+#include <string>
+typedef int __ZERM____int;
 ");
                 
             Body?.Emit(stream);
@@ -84,6 +85,7 @@ typedef int __ZERM__CInt32;
     {
         public Token Token;
 
+        public HashSet<TypeDecl> TypeDecls = new HashSet<ast.TypeDecl>();
         public HashSet<FnDecl> FnDecls = new HashSet<ast.FnDecl>();
         public List<Stmt> Stmts = new List<ast.Stmt>();
         public Block? Parent;
@@ -100,8 +102,25 @@ typedef int __ZERM__CInt32;
 
         public void Emit(StreamWriter stream)
         {
-            foreach (var decl in FnDecls)
+            var typeDeclIds = new HashSet<string>();
+            foreach (var decl in TypeDecls)
+            {
+                typeDeclIds.Add(decl.Id.Text);
                 decl.EmitForwardDeclaration(stream);
+            }
+            // foreach (var decl in TypeDecls)
+            //     decl.EmitImplementation(stream);
+
+            foreach (var decl in FnDecls)
+            {
+                if (typeDeclIds.Contains(decl.Id.Text))
+                {
+                    throw new CompileError(decl.Id, 
+                    $"Type already declared in this scope with ID '{decl.Id.Text}'");
+                }
+
+                decl.EmitForwardDeclaration(stream);
+            }
             foreach (var decl in FnDecls)
                 decl.EmitImplementation(stream);
             foreach (var stmt in Stmts)
@@ -131,19 +150,65 @@ typedef int __ZERM__CInt32;
         }
     }
 
-    public class FnDecl : IShowable
+    public abstract class Decl : IShowable
+    {
+        public Token Id;
+        public Block Block;
+
+        public Decl(Block block, Token id)
+        {
+            Id = id;
+            Block = block;
+        }
+
+        public abstract void Show();
+    }
+
+    public class TypeDecl : Decl
+    {
+        public Block? Body = null;
+
+        public TypeDecl(Block block, Token id) : base(block, id) {}
+
+        public override bool Equals(object? obj)
+        {
+            return obj is FnDecl decl &&
+                Id.Text == decl.Id.Text;
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.Text.GetHashCode();
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[TyD:{Id.Text}]";
+        }
+
+        public void EmitForwardDeclaration(StreamWriter stream)
+        {
+            stream.Write("struct __ZERM__");
+            stream.Write(Id.Text);
+
+            stream.WriteLine('{');
+            Body?.Emit(stream);
+            stream.WriteLine("};\n");
+        }
+    }
+
+    public class FnDecl : Decl
     {
         public TypeSpec? ReturnType = null;
         public List<Param> Params = new List<compiler2.ast.Param>();
         public Block? Body = null;
-        public Token Id;
-        public Block Block;
 
-        public FnDecl(Block block, Token id)
-        {
-            Block = block;
-            Id = id;
-        }
+        public FnDecl(Block block, Token id) : base(block, id) {}
 
         public override bool Equals(object? obj)
         {
@@ -154,10 +219,10 @@ typedef int __ZERM__CInt32;
 
         public override int GetHashCode()
         {
-            return HashCode.Combine(Id, ReturnType);
+            return HashCode.Combine(Id.Text, ReturnType);
         }
 
-        public void Show()
+        public override void Show()
         {
             Printer.Print(ToString());
             if (Body != null)
@@ -448,9 +513,9 @@ typedef int __ZERM__CInt32;
 
         public override void Emit(StreamWriter stream)
         {
-            if (Value.Text.EndsWith("ci32"))
+            if (Value.Text.EndsWith("cint"))
             {
-                // CInt32
+                // 'int' C++ type
                 stream.Write("(int)");
                 stream.Write(Value.Text.Substring(0, Value.Text.Length - 4));
             }
@@ -509,7 +574,12 @@ typedef int __ZERM__CInt32;
 
         public override void Emit(StreamWriter stream)
         {
+            // C++ string wrapper:
+            // __ZERM__String(<string>)
+            stream.Write(Compiler.Prefix);
+            stream.Write("String(");
             stream.Write(Value.Text);
+            stream.Write(')');
         }
     }
 

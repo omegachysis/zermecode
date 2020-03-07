@@ -62,6 +62,20 @@ namespace compiler2
 
                     block.FnDecls.Add(fn);
                 }
+                // Type declaration:
+                else if (t.Id == TokenId.Type)
+                {
+                    var type = ParseTypeDecl();
+
+                    // Check uniqueness:
+                    if (block!.TypeDecls.Contains(type))
+                    {
+                        throw new ParseError(type.Id,
+                            $"{type} already declared in this scope");
+                    }
+
+                    block.TypeDecls.Add(type);
+                }
                 else if (t.Id == TokenId.Id)
                 {
                     // Could be an assignment or a function call.
@@ -101,6 +115,26 @@ namespace compiler2
                 else
                     throw new ParseError(t, "Expected '}', assignment, or statement.");
             }
+        }
+
+        private ast.TypeDecl ParseTypeDecl()
+        {
+            Console.WriteLine("Type decl");
+
+            // Type ID:
+            Token t = Next();
+            if (t.Id != TokenId.Id)
+                throw new ParseError(t, "Expected identifier");
+            var type = new ast.TypeDecl(block!, t);
+
+            t = Next();
+            if (t.Id != TokenId.Begin)
+                throw new ParseError(t, "Expected '{'");
+
+            // Block:
+            type.Body = ParseBlock();
+
+            return type;
         }
 
         private ast.FnDecl ParseFnDecl()

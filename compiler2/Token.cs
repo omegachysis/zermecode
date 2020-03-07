@@ -48,4 +48,6 @@ public enum TokenId
     Eq,
     Op,
     Str,
+    Return,
+    Type,
 }

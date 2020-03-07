@@ -1,7 +1,3 @@
 fn main() {
-    print1();
-}
-
-fn print1() {
-    print(5ci32 * 2ci32);
+    print("Hello World!");
 }

@@ -1,9 +1,14 @@
-fn print(CInt32 x) {
-    #cpp("std::cout << __ZERM__x;");
+type String {
+    #cpp("__ZERM__String(std::string cstring) { this->cstring = cstring; }");
+    #cpp("std::string cstring;");
 }
 
 /*
-fn print(__ZERM__String str) {
-    #cpp("std::cout << __ZERM__str.");
+fn print(__int x) {
+    #cpp("std::cout << __ZERM__x;");
 }
 */
+
+fn print(String str) {
+    #cpp("std::cout << __ZERM__str.cstring;");
+}
