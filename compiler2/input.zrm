@@ -1,3 +1,7 @@
 fn main() {
+    print1();
+}
+
+fn print1() {
     print(1ci32);
 }

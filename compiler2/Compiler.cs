@@ -101,7 +101,9 @@ typedef int __ZERM__CInt32;
         public void Emit(StreamWriter stream)
         {
             foreach (var decl in Decls)
-                decl.Emit(stream);
+                decl.EmitForwardDeclaration(stream);
+            foreach (var decl in Decls)
+                decl.EmitImplementation(stream);
             foreach (var stmt in Stmts)
                 stmt.Emit(stream);
         }
@@ -142,7 +144,8 @@ typedef int __ZERM__CInt32;
 
         abstract public void Show();
         
-        public abstract void Emit(StreamWriter stream);
+        public abstract void EmitForwardDeclaration(StreamWriter stream);
+        public abstract void EmitImplementation(StreamWriter stream);
     }
 
     public class FnDecl : Decl
@@ -185,7 +188,7 @@ typedef int __ZERM__CInt32;
             return $"[FnD:{Id.Text}({args}) -> {ReturnType}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        private void EmitPrototype(StreamWriter stream)
         {
             // Emit return type:
             if (ReturnType == null)
@@ -212,7 +215,19 @@ typedef int __ZERM__CInt32;
             if (Params.Count > 0)
                 Params.Last().Emit(stream);
 
-            stream.Write("){");
+            stream.Write(')');
+        }
+
+        public override void EmitForwardDeclaration(StreamWriter stream)
+        {
+            EmitPrototype(stream);
+            stream.Write(';');
+        }
+
+        public override void EmitImplementation(StreamWriter stream)
+        {
+            EmitPrototype(stream);
+            stream.Write('{');
             Body?.Emit(stream);
             stream.Write('}');
         }
