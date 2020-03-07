@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using compiler2.ast;
 
 namespace compiler2
 {
@@ -48,66 +49,15 @@ namespace compiler2
                 // Function declaration:
                 if (t.Id == TokenId.Fn)
                 {
-                    // Function ID:
-                    t = Next();
-                    if (t.Id != TokenId.Id)
-                        throw new ParseError(t, "Expected identifier");
-                    var fn = new ast.FnDecl(t);
-                    var tId = t;
-
-                    t = Next();
-                    if (t.Id != TokenId.LParen)
-                        throw new ParseError(t, "Expected '('");
-
-                    // Function arguments:
-                    var argIds = new HashSet<string>();
-                    while (true)
-                    {
-                        t = Next();
-                        if (t.Id == TokenId.RParen)
-                            break;
-
-                        var typeSpec = ParseTypeSpec(t);
-                        var argId = Next();
-                        if (argId.Id != TokenId.Id)
-                            throw new ParseError(argId, "Expected identifier");
-                        if (!argIds.Add(argId.Text))
-                            throw new ParseError(argId, "Argument already defined");
-
-                        fn.Params.Add(new compiler2.ast.Param(typeSpec, argId));
-
-                        t = Next();
-                        if (t.Id == TokenId.RParen)
-                            break;
-                        else if (t.Id == TokenId.Comma)
-                            continue;
-                        else
-                            new ParseError(t, "Expected ',' or ')'");
-                    }
-
-                    t = Next();
-                    if (t.Id == TokenId.RArrow)
-                    {
-                        // Function return:
-                        fn.ReturnType = ParseTypeSpec(Next());
-
-                        t = Next();
-                    }
+                    var fn = ParseFnDecl();
 
                     // Check uniqueness:
                     if (block.Decls.Contains(fn))
                     {
-                        throw new ParseError(tId, 
+                        throw new ParseError(fn.Id,
                             $"{fn} already declared in this scope");
                     }
 
-                    if (t.Id != TokenId.Begin)
-                        throw new ParseError(t, "Expected '{'");
-
-                    // Function block:
-                    fn.Body = ParseBlock();
-
-                    fn.Show();
                     block.Decls.Add(fn);
                 }
                 else if (t.Id == TokenId.End)
@@ -149,6 +99,65 @@ namespace compiler2
                 else
                     throw new ParseError(t, "Expected '}', assignment, or statement.");
             }
+        }
+
+        private ast.FnDecl ParseFnDecl()
+        {
+            Console.WriteLine("Function decl");
+
+            // Function ID:
+            Token t = Next();
+            if (t.Id != TokenId.Id)
+                throw new ParseError(t, "Expected identifier");
+            var fn = new ast.FnDecl(t);
+            var tId = t;
+
+            t = Next();
+            if (t.Id != TokenId.LParen)
+                throw new ParseError(t, "Expected '('");
+
+            // Function arguments:
+            var argIds = new HashSet<string>();
+            while (true)
+            {
+                t = Next();
+                if (t.Id == TokenId.RParen)
+                    break;
+
+                var typeSpec = ParseTypeSpec(t);
+                var argId = Next();
+                if (argId.Id != TokenId.Id)
+                    throw new ParseError(argId, "Expected identifier");
+                if (!argIds.Add(argId.Text))
+                    throw new ParseError(argId, "Argument already defined");
+
+                fn.Params.Add(new compiler2.ast.Param(typeSpec, argId));
+
+                t = Next();
+                if (t.Id == TokenId.RParen)
+                    break;
+                else if (t.Id == TokenId.Comma)
+                    continue;
+                else
+                    new ParseError(t, "Expected ',' or ')'");
+            }
+
+            t = Next();
+            if (t.Id == TokenId.RArrow)
+            {
+                // Function return:
+                fn.ReturnType = ParseTypeSpec(Next());
+
+                t = Next();
+            }
+
+            if (t.Id != TokenId.Begin)
+                throw new ParseError(t, "Expected '{'");
+
+            // Function block:
+            fn.Body = ParseBlock();
+
+            return fn;
         }
 
         private ast.FnCall ParseFnCall(Token fnId)
@@ -321,8 +330,8 @@ namespace compiler2.ast
 
     public class Block
     {
-        public HashSet<Decl> Decls = new HashSet<Decl>();
-        public List<Stmt> Stmts = new List<Stmt>();
+        public HashSet<Decl> Decls = new HashSet<global::compiler2.ast.Decl>();
+        public List<Stmt> Stmts = new List<global::compiler2.ast.Stmt>();
     }
 
     public abstract class Decl 
@@ -334,7 +343,7 @@ namespace compiler2.ast
     {
         public Token Id;
         public TypeSpec? ReturnType = null;
-        public List<Param> Params = new List<Param>();
+        public List<Param> Params = new List<global::compiler2.ast.Param>();
         public Block? Body = null;
 
         public FnDecl(Token id)
@@ -466,7 +475,7 @@ namespace compiler2.ast
     public class FnCall : Expr
     {
         public Token Id;
-        public List<Expr> Args = new List<Expr>();
+        public List<Expr> Args = new List<global::compiler2.ast.Expr>();
 
         public FnCall(Token id)
         {
