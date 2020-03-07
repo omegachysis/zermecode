@@ -1,0 +1,34 @@
+
+type Example {
+    Int a = 0; // Immutable and initialized.
+    Int b = _; // Immutable and uninitialized, so it must be initialized on construction.
+    Int c := 0; // Mutable and initialized.
+    Int d ?= 0; // Immutable and initialized, defaulting to 0 if not otherwise set.
+    Int e ?:= 0; // Mutable and initialized, defaulting to 0 if not otherwise set.
+
+    // The only difference between := and ?:= is that ?:= is only set ONCE in the 
+    // construction phase, since the default value is never set if it is passed in 
+    // to the constructor, while := is always set first, and then set again 
+    // if a value is passed in.
+
+    new {
+        // Constructor code.
+        // Defaults above and any parameters are set before this runs.
+    }
+}
+
+fn main() {
+
+    a = Example(); // ERROR: must initialize 'b'
+
+    b = Example(2);
+    notice(b.b = 2);
+    notice(b.c = 0);
+    notice(b.d = 0);
+    notice(b.e = 0);
+
+    c = Example(b = 2); // Named parameters are always allowed.
+
+    d := Example(2, d = 1);
+    d.d = 2 // ERROR: 'd.d' is immutable.
+}
