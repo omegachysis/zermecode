@@ -48,13 +48,11 @@ namespace compiler2
                 // Function declaration:
                 if (t.Id == TokenId.Fn)
                 {
-                    var fn = new ast.FnDecl();
-
                     // Function ID:
                     t = Next();
                     if (t.Id != TokenId.Id)
                         throw new ParseError(t, "Expected identifier");
-                    fn.Id = t.Text;
+                    var fn = new ast.FnDecl(t);
                     var tId = t;
 
                     t = Next();
@@ -65,18 +63,18 @@ namespace compiler2
                     var argIds = new HashSet<string>();
                     while (true)
                     {
-                        var typeSpec = ParseTypeSpec();
+                        t = Next();
+                        if (t.Id == TokenId.RParen)
+                            break;
+
+                        var typeSpec = ParseTypeSpec(t);
                         var argId = Next();
                         if (argId.Id != TokenId.Id)
                             throw new ParseError(argId, "Expected identifier");
                         if (!argIds.Add(argId.Text))
                             throw new ParseError(argId, "Argument already defined");
 
-                        fn.Params.Add(new compiler2.ast.Param()
-                        {
-                            Type = typeSpec,
-                            Id = argId.Text,
-                        });
+                        fn.Params.Add(new compiler2.ast.Param(typeSpec, argId));
 
                         t = Next();
                         if (t.Id == TokenId.RParen)
@@ -91,7 +89,7 @@ namespace compiler2
                     if (t.Id == TokenId.RArrow)
                     {
                         // Function return:
-                        fn.ReturnType = ParseTypeSpec();
+                        fn.ReturnType = ParseTypeSpec(Next());
 
                         t = Next();
                     }
@@ -141,7 +139,7 @@ namespace compiler2
                         if (la.Id != TokenId.Semi)
                             throw new ParseError(la, "Expected ';'");
 
-                        var assn = new ast.Assn(t.Text, rhs);
+                        var assn = new ast.Assn(t, rhs);
                         assn.Show();
                         block.Stmts.Add(assn);
                     }
@@ -167,9 +165,8 @@ namespace compiler2
                     throw new NotImplementedException();
             }
 
-            return new ast.FnCall()
+            return new ast.FnCall(fnId)
             {
-                Id = fnId.Text,
                 Args = args,
             };
         }
@@ -237,18 +234,17 @@ namespace compiler2
             else if (t.Id == TokenId.Number)
             {
                 la = Next();
-                return new ast.NumExpr(t.Text);
+                return new ast.NumExpr(t);
             }
             else
                 throw new ParseError(t, "Expected identifier or literal");
         }
 
-        private ast.TypeSpec ParseTypeSpec()
+        private ast.TypeSpec ParseTypeSpec(Token t)
         {
-            var t = Next();
             if (t.Id != TokenId.Id)
                 throw new ParseError(t, "Expected identifier");
-            return new ast.SimpleTypeSpec(t.Text);
+            return new ast.SimpleTypeSpec(t);
         }
 
         private Token Next()
@@ -336,15 +332,20 @@ namespace compiler2.ast
 
     public class FnDecl : Decl, IShowable
     {
-        public string Id = string.Empty;
+        public Token Id;
         public TypeSpec? ReturnType = null;
         public List<Param> Params = new List<Param>();
         public Block? Body = null;
 
+        public FnDecl(Token id)
+        {
+            Id = id;
+        }
+
         public override bool Equals(object? obj)
         {
             return obj is FnDecl decl &&
-                Id == decl.Id && ReturnType == decl.ReturnType && 
+                Id.Text == decl.Id.Text && ReturnType == decl.ReturnType && 
                 Params.Select(x => x.Type).SequenceEqual(decl.Params.Select(x => x.Type));
         }
 
@@ -370,14 +371,20 @@ namespace compiler2.ast
         public override string ToString()
         {
             var args = string.Join(',', Params.Select(x => x.ToString()));
-            return $"[FnD:{Id}({args}) -> {ReturnType}]";
+            return $"[FnD:{Id.Text}({args}) -> {ReturnType}]";
         }
     }
 
     public class Param : IShowable
     {
-        public TypeSpec? Type = null;
-        public string Id = string.Empty;
+        public TypeSpec Type;
+        public Token Id;
+
+        public Param(TypeSpec type, Token id)
+        {
+            Type = type;
+            Id = id;
+        }
 
         public void Show()
         {
@@ -386,7 +393,7 @@ namespace compiler2.ast
 
         public override string ToString()
         {
-            return $"<P:{Type} {Id}>";
+            return $"<P:{Type} {Id.Text}>";
         }
     }
 
@@ -397,9 +404,9 @@ namespace compiler2.ast
 
     public class SimpleTypeSpec : TypeSpec
     {
-        public string Id = string.Empty;
+        public Token Id;
 
-        public SimpleTypeSpec(string id)
+        public SimpleTypeSpec(Token id)
         {
             Id = id;
         }
@@ -407,7 +414,7 @@ namespace compiler2.ast
         public override bool Equals(object? obj)
         {
             return obj is SimpleTypeSpec other && 
-                Id == other.Id;
+                Id.Text == other.Id.Text;
         }
 
         public override int GetHashCode()
@@ -422,7 +429,7 @@ namespace compiler2.ast
 
         public override string ToString()
         {
-            return $"[ST:{Id}]";
+            return $"[ST:{Id.Text}]";
         }
     }
 
@@ -458,8 +465,13 @@ namespace compiler2.ast
 
     public class FnCall : Expr
     {
-        public string Id = string.Empty;
+        public Token Id;
         public List<Expr> Args = new List<Expr>();
+
+        public FnCall(Token id)
+        {
+            Id = id;
+        }
 
         public override void Show()
         {
@@ -469,15 +481,15 @@ namespace compiler2.ast
         public override string ToString()
         {
             var args = string.Join(',', Args.Select(x => x.ToString()));
-            return $"[FnC:{Id}({args})]";
+            return $"[FnC:{Id.Text}({args})]";
         }
     }
 
     public class NumExpr : Expr
     {
-        public string Value;
+        public Token Value;
 
-        public NumExpr(string value)
+        public NumExpr(Token value)
         {
             Value = value;
         }
@@ -489,7 +501,7 @@ namespace compiler2.ast
 
         public override string ToString()
         {
-            return $"[N:{Value}]";
+            return $"[N:{Value.Text}]";
         }
     }
     
@@ -539,10 +551,10 @@ namespace compiler2.ast
 
     public class Assn : Stmt
     {
-        public string Id = string.Empty;
+        public Token Id;
         public Expr Value;
 
-        public Assn(string id, Expr value)
+        public Assn(Token id, Expr value)
         {
             Id = id;
             Value = value;
@@ -555,7 +567,7 @@ namespace compiler2.ast
 
         public override string ToString()
         {
-            return $"[A:{Id} = {Value}]";
+            return $"[A:{Id.Text} = {Value}]";
         }
     }
 }

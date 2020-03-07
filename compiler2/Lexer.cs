@@ -120,7 +120,10 @@ namespace compiler2
                         yield return new Token(TokenId.RArrow, line, col);
                     }
                     else
-                        throw new NotImplementedException();
+                    {
+                        yield return new Token(TokenId.Operator, "-", line, col - 1);
+                        goto Backtrack;
+                    }
                 }
                 else if (c == '/')
                 {
