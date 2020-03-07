@@ -44,4 +44,6 @@ public enum TokenId
     RArrow,
     Comma,
     Semi,
+    Number,
+    Equal,
 }

@@ -1,4 +1,11 @@
 
+
+x = 10;
+x = test();
+test();
+
+/*
+
 fn print(String text) {
     test();
     //#include("<iostream>");
@@ -6,3 +13,5 @@ fn print(String text) {
 }
 
 print();
+
+*/

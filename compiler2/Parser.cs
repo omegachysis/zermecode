@@ -109,6 +109,7 @@ namespace compiler2
                     // Function block:
                     fn.Body = ParseBlock();
 
+                    fn.Show();
                     block.Decls.Add(fn);
                 }
                 else if (t.Id == TokenId.End)
@@ -122,18 +123,41 @@ namespace compiler2
                     if (t1.Id == TokenId.LParen)
                     {
                         // Function call.
-                        block.Stmts.Add(ParseFnCall(fnId: t));
+                        var fnCall = ParseFnCall(fnId: t);
+                        var t2 = Next();
+                        if (t2.Id != TokenId.Semi)
+                            throw new ParseError(t2, "Expected ';'");
+
+                        var stmt = new ast.ExprStmt(fnCall);
+                        stmt.Show();
+                        block.Stmts.Add(stmt);
+                    }
+                    else if (t1.Id == TokenId.Equal)
+                    {
+                        // Assignment.
+                        Console.WriteLine("Assignment");
+
+                        var rhs = ParseExpr(Next());
+                        var t2 = Next();
+                        if (t2.Id != TokenId.Semi)
+                            throw new ParseError(t2, "Expected ';'");
+
+                        var assn = new ast.Assn(t.Text, rhs);
+                        assn.Show();
+                        block.Stmts.Add(assn);
                     }
                     else
                         throw new NotImplementedException();
                 }
                 else
-                    throw new ParseError(t, "Expected function declaration, statement, or '}'");
+                    throw new ParseError(t, "Expected '}', assignment, or statement.");
             }
         }
 
         private ast.FnCall ParseFnCall(Token fnId)
         {
+            Console.WriteLine("Function call");
+
             var args = new List<ast.Expr>();
             while (true)
             {
@@ -141,12 +165,8 @@ namespace compiler2
                 if (t.Id == TokenId.RParen)
                     break;
                 else
-                    args.Add(ParseExpr());
+                    throw new NotImplementedException();
             }
-
-            var t1 = Next();
-            if (t1.Id != TokenId.Semi)
-                throw new ParseError(t1, "Expected ';'");
 
             return new ast.FnCall()
             {
@@ -155,9 +175,29 @@ namespace compiler2
             };
         }
 
-        private ast.Expr ParseExpr()
+        private ast.Expr ParseExpr(Token t)
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Expr");
+
+            if (t.Id == TokenId.Id)
+            {
+                // Could be a function call.
+                var t1 = Next();
+                if (t1.Id == TokenId.LParen)
+                {
+                    // Function call.
+                    var fnCall = ParseFnCall(fnId: t);
+                    return fnCall;
+                }
+                else
+                    throw new NotImplementedException();
+            }
+            else if (t.Id == TokenId.Number)
+            {
+                return new ast.Number(t.Text);
+            }
+            else
+                throw new ParseError(t, "Expected identifier");
         }
 
         private ast.TypeSpec ParseTypeSpec()
@@ -348,7 +388,32 @@ namespace compiler2.ast
         abstract public void Show();
     }
 
-    public class FnCall : Stmt
+    public class ExprStmt : Stmt
+    {
+        public Expr Expr;
+
+        public ExprStmt(Expr expr)
+        {
+            Expr = expr;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[ExS:{Expr}]";
+        }
+    }
+
+    public abstract class Expr : IShowable
+    {
+        public abstract void Show();
+    }
+
+    public class FnCall : Expr
     {
         public string Id = string.Empty;
         public List<Expr> Args = new List<Expr>();
@@ -365,8 +430,45 @@ namespace compiler2.ast
         }
     }
 
-    public abstract class Expr : IShowable
+    public class Number : Expr
     {
-        public abstract void Show();
+        public string Value;
+
+        public Number(string value)
+        {
+            Value = value;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[N:{Value}]";
+        }
+    }
+
+    public class Assn : Stmt
+    {
+        public string Id = string.Empty;
+        public Expr Value;
+
+        public Assn(string id, Expr value)
+        {
+            Id = id;
+            Value = value;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[A:{Id} = {Value})]";
+        }
     }
 }
