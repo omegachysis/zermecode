@@ -204,7 +204,7 @@ namespace compiler2.ast
 
         public static void Print(string text)
         {
-            Console.WriteLine(new String(' ', _indent) + text);
+            Console.WriteLine(new String(' ', _indent * 2) + text);
         }
     }
 
@@ -224,14 +224,13 @@ namespace compiler2.ast
             if (Success)
             {
                 Printer.Print("Program");
+                Printer.Print("");
                 if (Body != null)
                 {
-                    Printer.Promote();
                     foreach (var decl in Body.Decls)
                         decl.Show();
                     foreach (var stmt in Body.Stmts)
                         stmt.Show();
-                    Printer.Demote();
                 }
             }
             else
@@ -288,7 +287,7 @@ namespace compiler2.ast
         public override string ToString()
         {
             var args = string.Join(',', Params.Select(x => x.ToString()));
-            return $"FnDecl({Id}({args}) -> {ReturnType})";
+            return $"[FnD:{Id}({args}) -> {ReturnType}]";
         }
     }
 
@@ -304,7 +303,7 @@ namespace compiler2.ast
 
         public override string ToString()
         {
-            return $"Param({Type} {Id})";
+            return $"<P:{Type} {Id}>";
         }
     }
 
@@ -340,7 +339,7 @@ namespace compiler2.ast
 
         public override string ToString()
         {
-            return $"SimpleTypeSpec({Id})";
+            return $"[ST:{Id}]";
         }
     }
 
@@ -362,7 +361,7 @@ namespace compiler2.ast
         public override string ToString()
         {
             var args = string.Join(',', Args.Select(x => x.ToString()));
-            return $"FnCall({Id}({args}))";
+            return $"[FnC:{Id}({args})]";
         }
     }
 

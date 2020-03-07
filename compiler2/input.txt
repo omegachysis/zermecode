@@ -4,3 +4,5 @@ fn print(String text) {
     //#include("<iostream>");
     //#cpp("std::cout << \"" + text + "\"");
 }
+
+print();
