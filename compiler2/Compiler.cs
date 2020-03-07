@@ -43,9 +43,9 @@ namespace compiler2
 
                 // Emit a preamble to wrap C++:
                 stream.Write(
-                    @"#include <iostream>
-                    typedef int __ZERM__CInt32;
-                    ");
+@"#include <iostream>
+typedef int __ZERM__CInt32;
+");
                     
                 Body?.Emit(stream);
 
