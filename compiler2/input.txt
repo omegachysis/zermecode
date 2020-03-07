@@ -1,23 +1,4 @@
-
-
-fn square(int s) -> int {
-    return = s * s;
-}
-
-fn print() {
-
-}
-
-r = square();
-
-/*
-
 fn print(String text) {
-    test();
-    //#include("<iostream>");
+    #include("<iostream>");
     //#cpp("std::cout << \"" + text + "\"");
 }
-
-print();
-
-*/

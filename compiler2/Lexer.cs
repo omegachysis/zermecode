@@ -163,6 +163,25 @@ namespace compiler2
                     yield return Finish();
                     yield return new Token(TokenId.Op, c.ToString(), line, col);
                 }
+                else if (c == '"')
+                {
+                    yield return Finish();
+                    builder.Append(c);
+                    // Read until we run into the end of the string.
+                    while (true)
+                    {
+                        c = Next();
+                        if (c == '"')
+                        {
+                            builder.Append(c);
+                            break;
+                        }
+                        else
+                            builder.Append(c);
+                    }
+
+                    yield return Finish();
+                }
                 else if (char.IsDigit(c))
                 {
                     // Read digits until there are no more digits.
@@ -199,6 +218,8 @@ namespace compiler2
                 return new Token(TokenId.Fn, string.Empty, line, col - t.Length);
             else if (char.IsDigit(t[0]))
                 return new Token(TokenId.Num, t, line, col - t.Length);
+            else if (t[0] == '"')
+                return new Token(TokenId.Str, t, line, col - t.Length);
             else
                 return new Token(TokenId.Id, t, line, col - t.Length);
         }

@@ -28,7 +28,7 @@ public struct Token
 
     public override string ToString()
     {
-        return $"({Id},`{Regex.Escape(Text)}`,{Line}:{Col})";
+        return $"({Id},{Text},{Line}:{Col})";
     }
 }
 
@@ -47,4 +47,5 @@ public enum TokenId
     Num,
     Eq,
     Op,
+    Str,
 }

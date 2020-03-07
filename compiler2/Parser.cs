@@ -171,7 +171,15 @@ namespace compiler2
                 if (t.Id == TokenId.RParen)
                     break;
                 else
-                    throw new NotImplementedException();
+                {
+                    args.Add(ParseExpr(t, out var la));
+                    if (la.Id == TokenId.RParen)
+                        break;
+                    else if (la.Id == TokenId.Comma)
+                        continue;
+                    else
+                        new ParseError(la, "Expected ',' or ')'");
+                }
             }
 
             return new ast.FnCall(fnId)
@@ -242,16 +250,35 @@ namespace compiler2
             }
             else if (t.Id == TokenId.Num)
             {
+                // Number literals.
                 la = Next();
                 return new ast.NumExpr(t);
             }
+            else if (t.Id == TokenId.Str)
+            {
+                // String literals.
+                la = Next();
+                return new ast.StrExpr(t);
+            }
             else if (t.Id == TokenId.Op && t.Text == "-")
             {
+                // Unary negation.
                 var negated = ParseFactor(Next(), out var la1);
                 la = la1;
                 var mult = t;
                 mult.Text = "*";
                 return new ast.AlgExpr(new ast.NumExpr(t), mult, negated);
+            }
+            else if (t.Id == TokenId.LParen)
+            {
+                // Parenthetical expression.
+                var expr = ParseExpr(Next(), out var la1);
+
+                if (la1.Id != TokenId.RParen)
+                    throw new ParseError(la1, "Expected ')'");
+                
+                la = Next();
+                return expr;
             }
             else
                 throw new ParseError(t, "Expected identifier or literal");
@@ -539,6 +566,26 @@ namespace compiler2.ast
         public override string ToString()
         {
             return $"[V:{Value.Text}]";
+        }
+    }
+
+    public class StrExpr : Expr
+    {
+        public Token Value;
+
+        public StrExpr(Token value)
+        {
+            Value = value;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[S:{Value.Text}]";
         }
     }
 
