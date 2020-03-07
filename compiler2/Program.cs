@@ -34,10 +34,14 @@ namespace compiler2
             ast.Show();
             Console.WriteLine();
 
+            Console.WriteLine("Transpiling...");
             var compiler = new Compiler();
-
+            var sw1 = Stopwatch.StartNew();
             using (var outStream = new StreamWriter("bin/ir.cpp"))
                 compiler.Write(ast, outStream);
+            sw1.Stop();
+
+            Console.WriteLine($"Transpiled: {sw1.ElapsedMilliseconds} ms");
         }
     }
 
