@@ -1,6 +1,14 @@
 
 
-x = -5 * -5;
+fn square(int s) -> int {
+    return = s * s;
+}
+
+fn print() {
+
+}
+
+r = square();
 
 /*
 

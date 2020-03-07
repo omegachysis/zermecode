@@ -410,7 +410,7 @@ namespace compiler2.ast
 
         public override string ToString()
         {
-            return $"<P:{Type} {Id.Text}>";
+            return $"[P:{Type} {Id.Text}]";
         }
     }
 

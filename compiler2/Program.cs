@@ -1,5 +1,6 @@
 ﻿#nullable enable
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -12,17 +13,17 @@ namespace compiler2
             ast.Program ast;
             using (var inStream = new StreamReader("input.txt"))
             {
-                // var lex = new Lexer(inStream);
-                // var tokens = lex.Tokens().GetEnumerator();
-                // while (tokens.MoveNext())
-                //     Console.WriteLine(tokens.Current);
-                // Console.WriteLine();
-
-                // inStream.BaseStream.Seek(0, SeekOrigin.Begin);
+                Console.WriteLine("Loading...");
                 var lex = new Lexer(inStream);
                 var tokens = lex.Tokens().GetEnumerator();
                 var parser = new Parser();
+
+                Console.WriteLine("Parsing...");
+                var sw = Stopwatch.StartNew();
                 ast = parser.Parse(tokens);
+                sw.Stop();
+
+                Console.WriteLine($"Parsed: {sw.ElapsedMilliseconds} ms");
             }
 
             ast.Show();
