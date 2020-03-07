@@ -1,4 +1,3 @@
-
 fn print(CInt32 x) {
     #cpp("std::cout << __ZERM__x;");
 }

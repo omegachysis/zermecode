@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -32,239 +33,534 @@ namespace compiler2
             }
         }
     }
+}
 
-    namespace ast
+namespace compiler2.ast
+{
+    public class Program : IShowable
     {
-        public partial class Program
-        {
-            public void Emit(StreamWriter stream)
-            {
-                if (!Success) return;
+        public bool Success = false;
+        public string ErrorMessage = string.Empty;
+        public Block? Body = null;
 
-                // Emit a preamble to wrap C++:
-                stream.Write(
+        public void Show()
+        {
+            if (Success)
+            {
+                Printer.Print("Program");
+                Printer.Print("");
+                if (Body != null)
+                {
+                    foreach (var decl in Body.Decls)
+                        decl.Show();
+                    foreach (var stmt in Body.Stmts)
+                        stmt.Show();
+                }
+            }
+            else
+            {
+                Console.WriteLine("ERROR COMPILING THE PROGRAM");
+            }
+        }
+
+        public void Emit(StreamWriter stream)
+        {
+            if (!Success) return;
+
+            // Emit a preamble to wrap C++:
+            stream.Write(
 @"#include <iostream>
 typedef int __ZERM__CInt32;
 ");
-                    
-                Body?.Emit(stream);
+                
+            Body?.Emit(stream);
 
-                stream.Write(
-                    "\nint main(){__ZERM__main__();}");
+            stream.Write(
+                "\nint main(){__ZERM__main__();}");
+        }
+    }
+
+    public class Block
+    {
+        public Token Token;
+
+        public HashSet<Decl> Decls = new HashSet<global::compiler2.ast.Decl>();
+        public List<Stmt> Stmts = new List<global::compiler2.ast.Stmt>();
+        public Block? Parent;
+
+        public Block(Token token, Block? parent)
+        {
+            Parent = parent;
+        }
+
+        public override string ToString()
+        {
+            return $"[Bl:{Token}]";
+        }
+
+        public void Emit(StreamWriter stream)
+        {
+            foreach (var decl in Decls)
+                decl.Emit(stream);
+            foreach (var stmt in Stmts)
+                stmt.Emit(stream);
+        }
+
+        public FnDecl FindFn(FnCall call)
+        {
+            Console.WriteLine($"FindFn: {this}, {call}");
+
+            var matches = Decls.Where(x => x.Id.Text == call.Id.Text).ToList();
+            if (matches.Count == 0)
+            {
+                if (Parent == null)
+                    throw new CompileError(call.Token,
+                        $"No matching function for {call}");
+
+                return Parent.FindFn(call);
+            }
+            else if (matches.Count > 1)
+            {
+                // TODO: do signature matching.
+                throw new NotImplementedException();
+            }
+            else
+                return (FnDecl)matches[0];
+        }
+    }
+
+    public abstract class Decl : IShowable
+    {
+        public Token Id;
+        public Block Block;
+
+        public Decl(Block block, Token id)
+        {
+            Block = block;
+            Id = id;
+        }
+
+        abstract public void Show();
+        
+        public abstract void Emit(StreamWriter stream);
+    }
+
+    public class FnDecl : Decl
+    {
+        public TypeSpec? ReturnType = null;
+        public List<Param> Params = new List<global::compiler2.ast.Param>();
+        public Block? Body = null;
+
+        public FnDecl(Block block, Token id) : base(block, id) {}
+
+        public override bool Equals(object? obj)
+        {
+            return obj is FnDecl decl &&
+                Id.Text == decl.Id.Text && ReturnType == decl.ReturnType && 
+                Params.Select(x => x.Type).SequenceEqual(decl.Params.Select(x => x.Type));
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Id, ReturnType);
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+            if (Body != null)
+            {
+                Printer.Promote();
+                foreach (var decl in Body.Decls)
+                    decl.Show();
+                foreach (var stmt in Body.Stmts)
+                    stmt.Show();
+                Printer.Demote();
             }
         }
 
-        public partial class Block
+        public override string ToString()
         {
-            public void Emit(StreamWriter stream)
+            var args = string.Join(',', Params.Select(x => x.ToString()));
+            return $"[FnD:{Id.Text}({args}) -> {ReturnType}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            // Emit return type:
+            if (ReturnType == null)
+                stream.Write("void");
+            else
+                ReturnType.Emit(stream);
+            stream.WriteLine();
+
+            // Append __ZERM__ to the front of the identifier 
+            // and also a return suffix because our languages counts 
+            // return type in a function signature.
+            stream.Write("__ZERM__");
+            stream.Write(Id.Text);
+            stream.Write("__");
+            stream.Write(ReturnType?.ToString());
+            stream.Write('(');
+
+            foreach (var param in Params.Take(Params.Count - 1))
             {
-                foreach (var decl in Decls)
-                    decl.Emit(stream);
-                foreach (var stmt in Stmts)
-                    stmt.Emit(stream);
+                param.Emit(stream);
+                stream.Write(',');
             }
 
-            public FnDecl FindFn(FnCall call)
-            {
-                Console.WriteLine($"FindFn: {this}, {call}");
+            if (Params.Count > 0)
+                Params.Last().Emit(stream);
 
-                var matches = Decls.Where(x => x.Id.Text == call.Id.Text).ToList();
-                if (matches.Count == 0)
+            stream.Write("){");
+            Body?.Emit(stream);
+            stream.Write('}');
+        }
+    }
+
+    public abstract class TypeSpec : IShowable
+    {
+        abstract public void Show();
+
+        public abstract void Emit(StreamWriter stream);
+    }
+
+    public class SimpleTypeSpec : TypeSpec
+    {
+        public Token Id;
+
+        public SimpleTypeSpec(Token id)
+        {
+            Id = id;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is SimpleTypeSpec other && 
+                Id.Text == other.Id.Text;
+        }
+
+        public override int GetHashCode()
+        {
+            return Id.GetHashCode();
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[ST:{Id.Text}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            stream.Write(Compiler.Prefix);
+            stream.Write(Id.Text);
+        }
+    }
+
+    public class Param : IShowable
+    {
+        public TypeSpec Type;
+        public Token Id;
+
+        public Param(TypeSpec type, Token id)
+        {
+            Type = type;
+            Id = id;
+        }
+
+        public void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[P:{Type} {Id.Text}]";
+        }
+
+        public void Emit(StreamWriter stream)
+        {
+            Type.Emit(stream);
+            stream.WriteLine();
+            stream.Write(Compiler.Prefix);
+            stream.Write(Id.Text);
+        }
+    }
+
+    public abstract class Stmt : IShowable
+    {
+        public Block Block;
+
+        public Stmt(Block block)
+        {
+            Block = block;
+        }
+
+        abstract public void Show();
+
+        public abstract void Emit(StreamWriter stream);
+    }
+
+    public class ExprStmt : Stmt
+    {
+        public Expr Expr;
+
+        public ExprStmt(Block block, Expr expr) : base(block)
+        {
+            Expr = expr;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[ExS:{Expr}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            Expr.Emit(stream);
+        }
+    }
+
+    public abstract class Expr : IShowable
+    {
+        public Block Block;
+
+        public Expr(Block block)
+        {
+            Block = block;
+        }
+
+        public abstract Token Token { get; }
+
+        public abstract void Show();
+
+        public abstract void Emit(StreamWriter stream);
+    }
+
+    public class FnCall : Expr
+    {
+        public Token Id;
+        public List<Expr> Args = new List<ast.Expr>();
+
+        public override Token Token => Id;
+
+        public FnCall(Block block, Token id) : base(block)
+        {
+            Id = id;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            var args = string.Join(',', Args.Select(x => x.ToString()));
+            return $"[FnC:{Id.Text}({args})]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            // Write function identifier:
+            if (Id.Text.StartsWith('#'))
+            {
+                if (Id.Text == "#cpp")
                 {
-                    if (Parent == null)
-                        throw new CompileError(call.Token,
-                            $"No matching function for {call}");
-
-                    return Parent.FindFn(call);
-                }
-                else if (matches.Count > 1)
-                {
-                    // TODO: do signature matching.
-                    throw new NotImplementedException();
-                }
-                else
-                    return (FnDecl)matches[0];
-            }
-        }
-
-        public partial class Decl
-        {
-            public abstract void Emit(StreamWriter stream);
-        }
-
-        public partial class FnDecl
-        {
-            public override void Emit(StreamWriter stream)
-            {
-                // Emit return type:
-                if (ReturnType == null)
-                    stream.Write("void");
-                else
-                    ReturnType.Emit(stream);
-                stream.WriteLine();
-
-                // Append __ZERM__ to the front of the identifier 
-                // and also a return suffix because our languages counts 
-                // return type in a function signature.
-                stream.Write("__ZERM__");
-                stream.Write(Id.Text);
-                stream.Write("__");
-                stream.Write(ReturnType?.ToString());
-                stream.Write('(');
-
-                foreach (var param in Params.Take(Params.Count - 1))
-                {
-                    param.Emit(stream);
-                    stream.Write(',');
-                }
-
-                if (Params.Count > 0)
-                    Params.Last().Emit(stream);
-
-                stream.Write("){");
-                Body?.Emit(stream);
-                stream.Write('}');
-            }
-        }
-
-        public partial class TypeSpec
-        {
-            public abstract void Emit(StreamWriter stream);
-        }
-
-        public partial class SimpleTypeSpec
-        {
-            public override void Emit(StreamWriter stream)
-            {
-                stream.Write(Compiler.Prefix);
-                stream.Write(Id.Text);
-            }
-        }
-
-        public partial class Param
-        {
-            public void Emit(StreamWriter stream)
-            {
-                Type.Emit(stream);
-                stream.WriteLine();
-                stream.Write(Compiler.Prefix);
-                stream.Write(Id.Text);
-            }
-        }
-
-        public partial class Stmt
-        {
-            public abstract void Emit(StreamWriter stream);
-        }
-
-        public partial class ExprStmt
-        {
-            public override void Emit(StreamWriter stream)
-            {
-                Expr.Emit(stream);
-            }
-        }
-
-        public partial class Expr
-        {
-            public abstract void Emit(StreamWriter stream);
-        }
-
-        public partial class FnCall
-        {
-            public override void Emit(StreamWriter stream)
-            {
-                // Write function identifier:
-                if (Id.Text.StartsWith('#'))
-                {
-                    if (Id.Text == "#cpp")
+                    // Writes C++ code directly, like a macro.
+                    foreach (var arg in Args)
                     {
-                        // Writes C++ code directly, like a macro.
-                        foreach (var arg in Args)
+                        stream.WriteLine();
+                        if (arg is StrExpr expr)
+                            stream.Write(
+                                expr.Value.Text.Substring(1, expr.Value.Text.Length - 2));
+                        else
                         {
-                            stream.WriteLine();
-                            if (arg is StrExpr expr)
-                                stream.Write(
-                                    expr.Value.Text.Substring(1, expr.Value.Text.Length - 2));
-                            else
-                            {
-                                throw new CompileError(arg.Token,
-                                    "#cpp only takes string arguments.");
-                            }
+                            throw new CompileError(arg.Token,
+                                "#cpp only takes string arguments.");
                         }
                     }
                 }
-                else
+            }
+            else
+            {
+                // Try to find a matching function:
+                var fn = Block.FindFn(this);
+
+                stream.Write(Compiler.Prefix);
+                stream.Write(Id.Text);
+                // Functions also have suffixes relating to return type:
+                stream.Write("__");
+                stream.Write(fn.ReturnType?.ToString());
+
+                // Write function arguments:
+                stream.Write('(');
+                foreach (var arg in Args.Take(Args.Count - 1))
                 {
-                    // Try to find a matching function:
-                    var fn = Block.FindFn(this);
-
-                    stream.Write(Compiler.Prefix);
-                    stream.Write(Id.Text);
-                    // Functions also have suffixes relating to return type:
-                    stream.Write("__");
-                    stream.Write(fn.ReturnType?.ToString());
-
-                    // Write function arguments:
-                    stream.Write('(');
-                    foreach (var arg in Args.Take(Args.Count - 1))
-                    {
-                        arg.Emit(stream);
-                        stream.Write(',');
-                    }
-
-                    if (Args.Count > 0)
-                        Args.Last().Emit(stream);
-
-                    stream.Write(");");
+                    arg.Emit(stream);
+                    stream.Write(',');
                 }
+
+                if (Args.Count > 0)
+                    Args.Last().Emit(stream);
+
+                stream.Write(");");
             }
         }
+    }
+    
+    public class NumExpr : Expr
+    {
+        public Token Value;
         
-        public partial class NumExpr
-        {
-            public override void Emit(StreamWriter stream)
-            {
-                if (Value.Text.EndsWith("ci32"))
-                {
-                    // CInt32
-                    stream.Write(Value.Text.Substring(0, Value.Text.Length - 4));
-                }
-                else
-                    throw new NotImplementedException();
-            }
-        }
-        
-        public partial class VarExpr
-        {
-            public override void Emit(StreamWriter stream)
-            {
+        public override Token Token => Value;
 
-            }
+        public NumExpr(Block block, Token value) : base(block)
+        {
+            Value = value;
         }
 
-        public partial class StrExpr
+        public override void Show()
         {
-            public override void Emit(StreamWriter stream)
-            {
-                stream.Write(Value.Text);
-            }
+            Printer.Print(ToString());
         }
 
-        public partial class AlgExpr
+        public override string ToString()
         {
-            public override void Emit(StreamWriter stream)
-            {
-
-            }
+            return $"[N:{Value.Text}]";
         }
 
-        public partial class Assn
+        public override void Emit(StreamWriter stream)
         {
-            public override void Emit(StreamWriter stream)
+            if (Value.Text.EndsWith("ci32"))
             {
-
+                // CInt32
+                stream.Write(Value.Text.Substring(0, Value.Text.Length - 4));
             }
+            else
+                throw new NotImplementedException();
+        }
+    }
+    
+    public class VarExpr : Expr
+    {
+        public Token Value;
+
+        public override Token Token => Value;
+
+        public VarExpr(Block block, Token value) : base(block)
+        {
+            Value = value;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[V:{Value.Text}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+
+        }
+    }
+
+    public class StrExpr : Expr
+    {
+        public Token Value;
+
+        public override Token Token => Value;
+
+        public StrExpr(Block block, Token value) : base(block)
+        {
+            Value = value;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[S:{Value.Text}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            stream.Write(Value.Text);
+        }
+    }
+
+    public class AlgExpr : Expr
+    {
+        public Expr Lhs;
+        public Token Op;
+        public Expr Rhs;
+
+        public override Token Token => Lhs.Token;
+
+        public AlgExpr(Block block, Expr lhs, Token op, Expr rhs) : base(block)
+        {
+            Lhs = lhs;
+            Op = op;
+            Rhs = rhs;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[{Lhs}{Op.Text}{Rhs}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+
+        }
+    }
+
+    public class Assn : Stmt
+    {
+        public Token Id;
+        public Expr Value;
+
+        public Assn(Block block, Token id, Expr value) : base(block)
+        {
+            Id = id;
+            Value = value;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[A:{Id.Text} = {Value}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+
         }
     }
 }
