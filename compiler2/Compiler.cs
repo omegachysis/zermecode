@@ -42,7 +42,7 @@ namespace compiler2
                     @"#include <iostream>
                     typedef int __ZERM__CInt32;
                     ");
-
+                    
                 Body?.Emit(stream);
 
                 stream.Write(
@@ -186,7 +186,7 @@ namespace compiler2
         {
             public override void Emit(StreamWriter stream)
             {
-                if (Value.Text.EndsWith("CI32"))
+                if (Value.Text.EndsWith("ci32"))
                 {
                     // CInt32
                     stream.Write(Value.Text.Substring(0, Value.Text.Length - 4));
