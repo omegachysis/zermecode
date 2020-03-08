@@ -176,6 +176,8 @@ typedef int {Compiler.Prefix}__int;
                 // Check parameter counts.
                 if (fn.Params.Count == call.Args.Count)
                 {
+                    var all = true;
+
                     // Check parameter types.
                     for (int i = 0; i < fn.Params.Count; i++)
                     {
@@ -183,9 +185,12 @@ typedef int {Compiler.Prefix}__int;
                         var arg = call.Args[i];
 
                         var paramType = FindType(param.Type.Token);
-                        if (paramType == arg.TypeDecl)
-                            yield return fn;
+                        if (paramType != arg.TypeDecl)
+                            all = false;
                     }
+
+                    if (all)
+                        yield return fn;
                 }
             }
         }
@@ -299,7 +304,7 @@ typedef int {Compiler.Prefix}__int;
             stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
             stream.Write("__");
-            stream.Write(ReturnType?.ToString());
+            ReturnType?.Emit(stream);
             stream.Write('(');
 
             foreach (var param in Params.Take(Params.Count - 1))
@@ -373,10 +378,8 @@ typedef int {Compiler.Prefix}__int;
         public override void Emit(StreamWriter stream)
         {
             // Immutable borrow => const __ZERM__Type&
-            stream.Write("const ");
             stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
-            stream.Write('&');
         }
     }
 
@@ -403,8 +406,9 @@ typedef int {Compiler.Prefix}__int;
 
         public void Emit(StreamWriter stream)
         {
+            stream.Write("const ");
             Type.Emit(stream);
-            stream.Write(' ');
+            stream.Write("& ");
             stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
         }
@@ -450,6 +454,7 @@ typedef int {Compiler.Prefix}__int;
         public override void Emit(StreamWriter stream)
         {
             Expr.Emit(stream);
+            stream.Write("\n;");
         }
     }
 
@@ -526,7 +531,7 @@ typedef int {Compiler.Prefix}__int;
                 stream.Write(Id.Text);
                 // Functions also have suffixes relating to return type:
                 stream.Write("__");
-                stream.Write(fn.ReturnType?.ToString());
+                fn.ReturnType?.Emit(stream);
 
                 // Write function arguments:
                 stream.Write('(');
@@ -539,7 +544,7 @@ typedef int {Compiler.Prefix}__int;
                 if (Args.Count > 0)
                     Args.Last().Emit(stream);
 
-                stream.Write(");");
+                stream.Write(")");
             }
         }
     }
