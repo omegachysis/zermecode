@@ -1,17 +1,31 @@
 type String {
-    #cpp("#__String(std::string cstring) { this->cstring = cstring; }");
-    #cpp("std::string cstring;");
+    #cpp("const char* raw;");
+    #cpp("#__String(const std::string& raw) { this->raw = raw.c_str(); }");
+}
+
+type Int {
+    #cpp("mpz_t raw;");
+    #cpp("#__Int(const std::string& from, const int& base) 
+        { mpz_init_set_str(raw, from.c_str(), base); }");
+    #cpp("~#__Int() { mpz_clear(raw); }");
 }
 
 fn print(String str) {
-    #cpp("std::cout << #__str.cstring << std::endl;");
+    #cpp("std::cout << #__str.raw << std::endl;");
 }
 
-fn printNum(__int x) {
-    #cpp("std::cout << #__x << std::endl;");
+fn printRawInt(__int x) {
+    #cpp("std::cout << #__x;");
+}
+
+fn printInt(Int x) {
+    #cpp("std::cout << #__x.raw;");
 }
 
 fn main() {
     print("Hello World!");
-    printNum(3__int + 5__int * 4__int);
+    printRawInt(3__int + 5__int * 4__int);
+    print("");
+    printInt(323489723487623487623478623847623847628476238476234);
+    print("");
 }

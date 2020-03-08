@@ -517,7 +517,14 @@ typedef int {Compiler.Prefix}__int;
                 stream.Write(Value.Text.Substring(0, Value.Text.Length - 5));
             }
             else
-                throw new NotImplementedException();
+            {
+                // Int type
+                // _ZRM_Int("str", base)
+                stream.Write(Compiler.Prefix);
+                stream.Write("Int(\"");
+                stream.Write(Value.Text);
+                stream.Write("\",10)");
+            }
         }
     }
     
