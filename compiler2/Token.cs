@@ -50,4 +50,5 @@ public enum TokenId
     Str,
     Return,
     Type,
+    Dot,
 }

@@ -75,6 +75,7 @@ namespace compiler2.ast
             stream.Write(
 $@"#include <iostream>
 #include <gmp.h>
+#include <math.h>
 #include <string>
 typedef int {Compiler.Prefix}__int;
 ");
@@ -139,8 +140,6 @@ typedef int {Compiler.Prefix}__int;
 
         public TypeDecl FindType(Token id)
         {
-            Console.WriteLine($"FindType: {this}, {id}");
-
             var matches = TypeDecls.Where(x => x.Id.Text == id.Text).ToList();
             if (matches.Count == 0)
             {
@@ -156,8 +155,6 @@ typedef int {Compiler.Prefix}__int;
 
         public FnDecl FindFn(FnCall call)
         {
-            Console.WriteLine($"FindFn: {this}, {call}");
-
             var matches = FindMatchingSignatures(call).ToList();
             if (matches.Count == 0)
             {
@@ -556,6 +553,12 @@ typedef int {Compiler.Prefix}__int;
             }
         }
     }
+
+    public enum NumLiteralType
+    {
+        Int,
+        Float32,
+    }
     
     public class NumExpr : Expr
     {
@@ -563,20 +566,37 @@ typedef int {Compiler.Prefix}__int;
         
         public override Token Token => Value;
 
+        public readonly NumLiteralType LitType;
+
         public override TypeDecl TypeDecl
         {
             get
             {
-                // Int type.
-                var literal = Value;
-                literal.Text = "Int";
-                return Block.FindType(literal);
+                if (LitType == NumLiteralType.Int)
+                {
+                    var literal = Value;
+                    literal.Text = "Int";
+                    return Block.FindType(literal);
+                }
+                else if (LitType == NumLiteralType.Float32)
+                {
+                    var literal = Value;
+                    literal.Text = "Float32";
+                    return Block.FindType(literal);
+                }
+                else 
+                    throw new NotImplementedException();
             }
         }
 
         public NumExpr(Block block, Token value) : base(block)
         {
             Value = value;
+            
+            if (value.Text.EndsWith("f"))
+                LitType = NumLiteralType.Float32;
+            else
+                LitType = NumLiteralType.Int;
         }
 
         public override void Show()
@@ -586,17 +606,29 @@ typedef int {Compiler.Prefix}__int;
 
         public override string ToString()
         {
-            return $"[N:{Value.Text}]";
+            return $"[N:{LitType} {Value.Text}]";
         }
 
         public override void Emit(StreamWriter stream)
         {
-            // Int type
-            // _ZRM_Int("str", base)
-            stream.Write(Compiler.Prefix);
-            stream.Write("Int(\"");
-            stream.Write(Value.Text.Replace("_", ""));
-            stream.Write("\",10)");
+            if (LitType == NumLiteralType.Int)
+            {
+                // _ZRM_Int("str", base)
+                stream.Write(Compiler.Prefix);
+                stream.Write("Int(\"");
+                stream.Write(Value.Text.Replace("_", ""));
+                stream.Write("\",10)");
+            }
+            else if (LitType == NumLiteralType.Float32)
+            {
+                // _ZRM_Float32(val)
+                stream.Write(Compiler.Prefix);
+                stream.Write("Float32(");
+                stream.Write(Value.Text.Replace("_", ""));
+                stream.Write(')');
+            }
+            else 
+                throw new NotImplementedException();   
         }
     }
     

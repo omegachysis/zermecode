@@ -66,6 +66,26 @@ fn op^(Int a, Int b) -> Int {
     return res;");
 }
 
+fn op+(Float32 a, Float32 b) -> Float32 {
+    #cpp("return #__Float32(#__a.raw + #__b.raw);");
+}
+
+fn op-(Float32 a) -> Float32 {
+    #cpp("return #__Float32(-#__a.raw);");
+}
+
+fn op-(Float32 a, Float32 b) -> Float32 {
+    #cpp("return #__Float32(#__a.raw - #__b.raw);");
+}
+
+fn op*(Float32 a, Float32 b) -> Float32 {
+    #cpp("return #__Float32(#__a.raw * #__b.raw);");
+}
+
+fn op^(Float32 a, Float32 b) -> Float32 {
+    #cpp("return #__Float32(std::pow(#__a.raw, #__b.raw));");
+}
+
 fn print(String str) {
     #cpp("std::cout << #__str.raw;");
 }
@@ -82,7 +102,10 @@ fn print(Int x) {
     #cpp("std::cout << #__x.raw;");
 }
 
+fn print(Float32 x) {
+    #cpp("std::cout << #__x.raw;");
+}
+
 fn main() {
-    print(2^100 * 90 - 50);
-    println("\nHello World!");
+    print(0.1f ^ 8.0f);
 }

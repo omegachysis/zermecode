@@ -122,6 +122,11 @@ namespace compiler2
                     yield return Finish();
                     yield return new Token(TokenId.Comma, line, col);
                 }
+                else if (c == '.')
+                {
+                    yield return Finish();
+                    yield return new Token(TokenId.Dot, line, col);
+                }
                 else if (c == '-')
                 {
                     yield return Finish();
@@ -206,7 +211,7 @@ namespace compiler2
                     while (true)
                     {
                         c = Next();
-                        if (char.IsLetterOrDigit(c) || c == '_')
+                        if (char.IsLetterOrDigit(c) || c == '_' || c == '.')
                         {
                             builder.Append(c);
                         }
