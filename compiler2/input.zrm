@@ -1,3 +1,4 @@
 fn main() {
     print("Hello World!");
+    printNum(3__int + 5__int * 4__int);
 }

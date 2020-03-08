@@ -3,12 +3,10 @@ type String {
     #cpp("std::string cstring;");
 }
 
-/*
-fn print(__int x) {
-    #cpp("std::cout << __ZERM__x;");
-}
-*/
-
 fn print(String str) {
-    #cpp("std::cout << __ZERM__str.cstring;");
+    #cpp("std::cout << __ZERM__str.cstring << std::endl;");
+}
+
+fn printNum(__int x) {
+    #cpp("std::cout << __ZERM__x << std::endl;");
 }

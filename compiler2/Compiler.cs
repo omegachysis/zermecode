@@ -513,11 +513,11 @@ typedef int __ZERM____int;
 
         public override void Emit(StreamWriter stream)
         {
-            if (Value.Text.EndsWith("cint"))
+            if (Value.Text.EndsWith("__int"))
             {
                 // 'int' C++ type
                 stream.Write("(int)");
-                stream.Write(Value.Text.Substring(0, Value.Text.Length - 4));
+                stream.Write(Value.Text.Substring(0, Value.Text.Length - 5));
             }
             else
                 throw new NotImplementedException();

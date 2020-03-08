@@ -200,7 +200,7 @@ namespace compiler2
                     while (true)
                     {
                         c = Next();
-                        if (char.IsLetterOrDigit(c))
+                        if (char.IsLetterOrDigit(c) || c == '_')
                         {
                             builder.Append(c);
                         }
