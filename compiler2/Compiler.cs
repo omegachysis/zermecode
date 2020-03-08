@@ -587,7 +587,7 @@ typedef int {Compiler.Prefix}__int;
             // _ZRM_Int("str", base)
             stream.Write(Compiler.Prefix);
             stream.Write("Int(\"");
-            stream.Write(Value.Text);
+            stream.Write(Value.Text.Replace("_", ""));
             stream.Write("\",10)");
         }
     }

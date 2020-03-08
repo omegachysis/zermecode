@@ -69,6 +69,6 @@ fn pow(Int b, Int p) -> Int {
 }
 
 fn main() {
-    print(pow(2, 100000));
+    print(pow(2, 1_000_000));
     println();
 }
