@@ -148,6 +148,15 @@ namespace compiler2
             var fn = new ast.FnDecl(block!, t);
             var tId = t;
 
+            // Detect if this is an operator definition:
+            if (t.Text == "op")
+            {
+                t = Next();
+                if (t.Id != TokenId.Op)
+                    throw new ParseError(t, "Expected operator");
+                fn.Id.Text += t.Text;
+            }
+
             t = Next();
             if (t.Id != TokenId.LParen)
                 throw new ParseError(t, "Expected '('");
@@ -224,23 +233,42 @@ namespace compiler2
             };
         }
 
+        private ast.FnCall ConvertAlgExprToFunction(Expr l, Token op, Expr r)
+        {
+            var opFn = op;
+            opFn.Text = "op" + opFn.Text;
+            var term1 = new ast.FnCall(block!, opFn);
+            term1.Args.Add(l);
+            term1.Args.Add(r);
+            return term1;
+        }
+
+        private ast.FnCall ConvertAlgExprToFunction(Token op, Expr expr)
+        {
+            var opFn = op;
+            opFn.Text = "op" + opFn.Text;
+            var term1 = new ast.FnCall(block!, opFn);
+            term1.Args.Add(expr);
+            return term1;
+        }
+
         private ast.Expr ParseExpr(Token t, out Token la)
         {
             Console.WriteLine("Expr");
 
             var l = ParseTerm(t, out var la1);
-            var term = l;
 
             while (la1.Id == TokenId.Op && (
                 la1.Text == "+" || la1.Text == "-"))
             {
+                // Interpret operators as functions:
                 var r = ParseTerm(Next(), out var la2);
-                term = new ast.AlgExpr(block!, term, la1, r);
+                l = ConvertAlgExprToFunction(l, la1, r);
                 la1 = la2;
             }
 
             la = la1;
-            return term;
+            return l;
         }
 
         private ast.Expr ParseTerm(Token t, out Token la)
@@ -253,8 +281,9 @@ namespace compiler2
             while (la1.Id == TokenId.Op && (
                 la1.Text == "/" || la1.Text == "*"))
             {
+                // Interpret operators as functions:
                 var r = ParseFactor(Next(), out var la2);
-                term = new ast.AlgExpr(block!, term, la1, r);
+                term = ConvertAlgExprToFunction(term, la1, r);
                 la1 = la2;
             }
 
@@ -265,6 +294,25 @@ namespace compiler2
         private ast.Expr ParseFactor(Token t, out Token la)
         {
             Console.WriteLine("Factor");
+
+            var l = ParseExponential(t, out var la1);
+            var term = l;
+
+            while (la1.Id == TokenId.Op && la1.Text == "^")
+            {
+                // Interpret operators as functions:
+                var r = ParseExponential(Next(), out var la2);
+                term = ConvertAlgExprToFunction(term, la1, r);
+                la1 = la2;
+            }
+
+            la = la1;
+            return term;
+        }
+
+        private ast.Expr ParseExponential(Token t, out Token la)
+        {
+            Console.WriteLine("Exponential");
 
             if (t.Id == TokenId.Id)
             {
@@ -298,12 +346,10 @@ namespace compiler2
             }
             else if (t.Id == TokenId.Op && t.Text == "-")
             {
-                // Unary negation.
-                var negated = ParseFactor(Next(), out var la1);
+                // Unary negation, interpret as a negation function.
+                var toNegate = ParseFactor(Next(), out var la1);
                 la = la1;
-                var mult = t;
-                mult.Text = "*";
-                return new ast.AlgExpr(block!, new ast.NumExpr(block!, t), mult, negated);
+                return ConvertAlgExprToFunction(t, toNegate);
             }
             else if (t.Id == TokenId.LParen)
             {

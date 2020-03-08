@@ -21,6 +21,8 @@ namespace compiler2
         public bool Write(ast.Program ast, StreamWriter stream)
         {
             Ast = ast;
+            if (!ast.Success)
+                return false;
 
             try
             {
@@ -289,6 +291,12 @@ typedef int {Compiler.Prefix}__int;
             return $"[FnD:{Id.Text}({args}) -> {ReturnType}]";
         }
 
+        public static string ReplaceOperatorSymbols(string text)
+        {
+            return text.Replace('+','a').Replace('-','s')
+                .Replace('*','m').Replace('/','d').Replace('^','e');
+        }
+
         private void EmitPrototype(StreamWriter stream)
         {
             // Emit return type:
@@ -302,7 +310,7 @@ typedef int {Compiler.Prefix}__int;
             // and also a return suffix because our languages counts 
             // return type in a function signature.
             stream.Write(Compiler.Prefix);
-            stream.Write(Id.Text);
+            stream.Write(ReplaceOperatorSymbols(Id.Text));
             stream.Write("__");
             ReturnType?.Emit(stream);
             stream.Write('(');
@@ -528,7 +536,7 @@ typedef int {Compiler.Prefix}__int;
                 var fn = Block.FindFn(this);
 
                 stream.Write(Compiler.Prefix);
-                stream.Write(Id.Text);
+                stream.Write(FnDecl.ReplaceOperatorSymbols(Id.Text));
                 // Functions also have suffixes relating to return type:
                 stream.Write("__");
                 fn.ReturnType?.Emit(stream);
@@ -665,57 +673,6 @@ typedef int {Compiler.Prefix}__int;
             stream.Write(Compiler.Prefix);
             stream.Write("String(");
             stream.Write(Value.Text);
-            stream.Write(')');
-        }
-    }
-
-    public class AlgExpr : Expr
-    {
-        public Expr Lhs;
-        public Token Op;
-        public Expr Rhs;
-
-        public override Token Token => Lhs.Token;
-
-        public override TypeDecl TypeDecl
-        {
-            get
-            {
-                throw new NotImplementedException();
-            }
-        }
-
-        public AlgExpr(Block block, Expr lhs, Token op, Expr rhs) : base(block)
-        {
-            Lhs = lhs;
-            Op = op;
-            Rhs = rhs;
-        }
-
-        public override void Show()
-        {
-            Printer.Print(ToString());
-        }
-
-        public override string ToString()
-        {
-            return $"[{Lhs}{Op.Text}{Rhs}]";
-        }
-
-        public override void Emit(StreamWriter stream)
-        {
-            stream.Write('(');
-            Lhs.Emit(stream);
-            switch (Op.Text)
-            {
-                case "+":
-                    stream.Write('+'); break;
-                case "-":
-                    stream.Write('-'); break;
-                case "*":
-                    stream.Write('*'); break;
-            }
-            Rhs.Emit(stream);
             stream.Write(')');
         }
     }

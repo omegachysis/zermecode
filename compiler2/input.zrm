@@ -31,6 +31,41 @@ type Int {
     #cpp("~#__Int() { mpz_clear(raw); }");
 }
 
+fn op+(Int a, Int b) -> Int {
+    #cpp("
+    #__Int res;
+    mpz_add(res.raw, #__a.raw, #__b.raw);
+    return res;");
+}
+
+fn op-(Int a, Int b) -> Int {
+    #cpp("
+    #__Int res;
+    mpz_sub(res.raw, #__a.raw, #__b.raw);
+    return res;");
+}
+
+fn op-(Int a) -> Int {
+    #cpp("
+    #__Int res;
+    mpz_neg(res.raw, #__a.raw);
+    return res;");
+}
+
+fn op*(Int a, Int b) -> Int {
+    #cpp("
+    #__Int res;
+    mpz_mul(res.raw, #__a.raw, #__b.raw);
+    return res;");
+}
+
+fn op^(Int a, Int b) -> Int {
+    #cpp("
+    #__Int res;
+    mpz_pow_ui(res.raw, #__a.raw, mpz_get_ui(#__b.raw));
+    return res;");
+}
+
 fn print(String str) {
     #cpp("std::cout << #__str.raw;");
 }
@@ -47,28 +82,7 @@ fn print(Int x) {
     #cpp("std::cout << #__x.raw;");
 }
 
-fn add(Int a, Int b) -> Int {
-    #cpp("
-    #__Int res;
-    mpz_add(res.raw, #__a.raw, #__b.raw);
-    return res;");
-}
-
-fn mul(Int a, Int b) -> Int {
-    #cpp("
-    #__Int res;
-    mpz_mul(res.raw, #__a.raw, #__b.raw);
-    return res;");
-}
-
-fn pow(Int b, Int p) -> Int {
-    #cpp("
-    #__Int res;
-    mpz_pow_ui(res.raw, #__b.raw, mpz_get_ui(#__p.raw));
-    return res;");
-}
-
 fn main() {
-    print(pow(2, 1_000_000));
-    println();
+    print(2^100 * 90 - 50);
+    println("\nHello World!");
 }
