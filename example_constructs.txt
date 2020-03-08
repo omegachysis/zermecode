@@ -1,10 +1,11 @@
 
 type Example {
     Int a = 0; // Immutable and initialized.
-    Int b = _; // Immutable and uninitialized, so it must be initialized on construction.
+    Int b = ?; // Immutable and uninitialized, so it must be initialized on construction.
     Int c := 0; // Mutable and initialized.
-    Int d ?= 0; // Immutable and initialized, defaulting to 0 if not otherwise set.
-    Int e ?:= 0; // Mutable and initialized, defaulting to 0 if not otherwise set.
+    Int d = 0?; // Immutable and initialized, defaulting to 0 if not otherwise set.
+    Int e := 0?; // Mutable and initialized, defaulting to 0 if not otherwise set.
+    Int f := ?; // Mutable and uninitialized, so it must be intiailized on construction.
 
     // The only difference between := and ?:= is that ?:= is only set ONCE in the 
     // construction phase, since the default value is never set if it is passed in 
@@ -31,4 +32,10 @@ fn main() {
 
     d := Example(2, d = 1);
     d.d = 2 // ERROR: 'd.d' is immutable.
+
+    // If you want to set a non-? variables quickly:
+    foo := Example()
+    {
+        c = 1;
+    };
 }

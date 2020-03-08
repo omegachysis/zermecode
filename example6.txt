@@ -1,0 +1,28 @@
+type Gender = Male, Female, Other;
+
+type Player {
+    String name = ?;
+    Gender gender = ?;
+
+    assume strength >= 0;
+    assume agility >= 0;
+    Nat strength := 100?;
+    Nat agility := 100?;
+
+    _position := Vec3()?, // Constructor initialization sets _position, not position.
+    get, set {
+        println("{name} changed position!");
+        _position := value;
+    };
+
+    assume food? >= 0.0; // Input to constructor assumption.
+    food := 0.0?, // Constructor initialization sets food, not _food.
+    get, set {
+        _food := value;
+        if (value <= 0.0) {
+            die();
+        }
+    };
+
+    timePlayed := Duration(), get;
+}

@@ -16,20 +16,29 @@ type Point : Shape {
 }
 
 type Rectangle : Shape {
-    Real centerX := _;
-    Real centerY := _;
+    Real centerX := ?;
+    Real centerY := ?;
 
-    #foreach $metric as width, height {
-        Real _$metric := _;
-        assume(_$metric) > 0;
-        
-        get $metric -> Real {
-            _$metric
-        }
-        set $metric {
-            assume(value > 0);
-            _$metric = value;
-        }
+    Real _width := ?;
+    assume(_width) > 0;
+
+    get width -> Real {
+        _width
+    }
+    set width {
+        assume(value > 0);
+        _width = value;
+    }
+
+    Real _width := ?;
+    assume(_width) > 0;
+
+    get height -> Real {
+        _height
+    }
+    set height {
+        assume(value > 0);
+        _height = value;
     }
 
     fn draw(Ctx& ctx) { /* ... */ }
