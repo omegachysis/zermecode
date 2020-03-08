@@ -133,6 +133,23 @@ typedef int {Compiler.Prefix}__int;
                 stmt.Emit(stream);
         }
 
+        public TypeDecl FindType(Token id)
+        {
+            Console.WriteLine($"FindType: {this}, {id}");
+
+            var matches = TypeDecls.Where(x => x.Id.Text == id.Text).ToList();
+            if (matches.Count == 0)
+            {
+                if (Parent == null)
+                    throw new CompileError(id,
+                        $"No matching type for {id}");
+
+                return Parent.FindType(id);
+            }
+            else
+                return matches.Single();
+        }
+
         public FnDecl FindFn(FnCall call)
         {
             Console.WriteLine($"FindFn: {this}, {call}");
@@ -296,6 +313,8 @@ typedef int {Compiler.Prefix}__int;
 
     public abstract class TypeSpec : IShowable
     {
+        public abstract Token Token { get; }
+
         abstract public void Show();
 
         public abstract void Emit(StreamWriter stream);
@@ -304,6 +323,8 @@ typedef int {Compiler.Prefix}__int;
     public class SimpleTypeSpec : TypeSpec
     {
         public Token Id;
+
+        public override Token Token => Id;
 
         public SimpleTypeSpec(Token id)
         {
@@ -423,6 +444,8 @@ typedef int {Compiler.Prefix}__int;
             Block = block;
         }
 
+        public abstract TypeDecl TypeDecl { get; }
+
         public abstract Token Token { get; }
 
         public abstract void Show();
@@ -436,6 +459,22 @@ typedef int {Compiler.Prefix}__int;
         public List<Expr> Args = new List<ast.Expr>();
 
         public override Token Token => Id;
+
+        public FnDecl FnDecl => Block.FindFn(this);
+
+        public override TypeDecl TypeDecl
+        {
+            get
+            {
+                if (Id.Text.StartsWith('#'))
+                    throw new InvalidOperationException("Cannot get type decl of metafunction");
+                
+                var fn = FnDecl;
+                if (fn.ReturnType is null)
+                    throw new CompileError(Token, "Cannot use return 'void' function");
+                return Block.FindType(fn.ReturnType.Token);
+            }
+        }
 
         public FnCall(Block block, Token id) : base(block)
         {
@@ -493,6 +532,17 @@ typedef int {Compiler.Prefix}__int;
         
         public override Token Token => Value;
 
+        public override TypeDecl TypeDecl
+        {
+            get
+            {
+                // Int type.
+                var literal = Value;
+                literal.Text = "Int";
+                return Block.FindType(literal);
+            }
+        }
+
         public NumExpr(Block block, Token value) : base(block)
         {
             Value = value;
@@ -510,21 +560,12 @@ typedef int {Compiler.Prefix}__int;
 
         public override void Emit(StreamWriter stream)
         {
-            if (Value.Text.EndsWith("__int"))
-            {
-                // 'int' C++ type
-                stream.Write("(int)");
-                stream.Write(Value.Text.Substring(0, Value.Text.Length - 5));
-            }
-            else
-            {
-                // Int type
-                // _ZRM_Int("str", base)
-                stream.Write(Compiler.Prefix);
-                stream.Write("Int(\"");
-                stream.Write(Value.Text);
-                stream.Write("\",10)");
-            }
+            // Int type
+            // _ZRM_Int("str", base)
+            stream.Write(Compiler.Prefix);
+            stream.Write("Int(\"");
+            stream.Write(Value.Text);
+            stream.Write("\",10)");
         }
     }
     
@@ -533,6 +574,14 @@ typedef int {Compiler.Prefix}__int;
         public Token Value;
 
         public override Token Token => Value;
+
+        public override TypeDecl TypeDecl
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
 
         public VarExpr(Block block, Token value) : base(block)
         {
@@ -560,6 +609,16 @@ typedef int {Compiler.Prefix}__int;
         public Token Value;
 
         public override Token Token => Value;
+
+        public override TypeDecl TypeDecl
+        {
+            get
+            {
+                var literal = Value;
+                literal.Text = "String";
+                return Block.FindType(literal);
+            }
+        }
 
         public StrExpr(Block block, Token value) : base(block)
         {
@@ -594,6 +653,14 @@ typedef int {Compiler.Prefix}__int;
         public Expr Rhs;
 
         public override Token Token => Lhs.Token;
+
+        public override TypeDecl TypeDecl
+        {
+            get
+            {
+                throw new NotImplementedException();
+            }
+        }
 
         public AlgExpr(Block block, Expr lhs, Token op, Expr rhs) : base(block)
         {

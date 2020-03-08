@@ -1,6 +1,26 @@
 type String {
     #cpp("const char* raw;");
-    #cpp("#__String(const std::string& raw) { this->raw = raw.c_str(); }");
+    #cpp("#__String(const std::string& raw) { 
+        this->raw = raw.c_str(); }");
+}
+
+type Float32 {
+    #cpp("float raw;");
+    #cpp("#__Float32(const float& raw) { 
+        this->raw = raw; }");
+}
+
+type Float64 {
+    #cpp("double raw;");
+    #cpp("#__Float64(const double& raw) { 
+        this->raw = raw; }");
+}
+
+type Rat {
+    #cpp("mpq_t raw;");
+    #cpp("#__Rat(const std::string& from, const int& base) 
+        { mpq_set_str(raw, from.c_str(), base); }");
+    #cpp("~#__Rat() { mpq_clear(raw); }");
 }
 
 type Int {
@@ -11,21 +31,13 @@ type Int {
 }
 
 fn print(String str) {
+    #cpp("std::cout << #__str.raw;");
+}
+
+fn println(String str) {
     #cpp("std::cout << #__str.raw << std::endl;");
 }
 
-fn printRawInt(__int x) {
-    #cpp("std::cout << #__x;");
-}
-
-fn printInt(Int x) {
-    #cpp("std::cout << #__x.raw;");
-}
-
 fn main() {
-    print("Hello World!");
-    printRawInt(3__int + 5__int * 4__int);
-    print("");
-    printInt(323489723487623487623478623847623847628476238476234);
-    print("");
+    println("Hello World!");
 }
