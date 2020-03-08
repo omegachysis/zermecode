@@ -164,10 +164,8 @@ typedef int {Compiler.Prefix}__int;
                         $"No matching function for {call}");
                 return Parent.FindFn(call);
             }
-            else if (matches.Count > 1)
-                throw new NotImplementedException();
-            else
-                return matches[0];
+            
+            return matches.Single();
         }
 
         public IEnumerable<FnDecl> FindMatchingSignatures(FnCall call)
@@ -175,10 +173,19 @@ typedef int {Compiler.Prefix}__int;
             var matches = FnDecls.Where(x => x.Id.Text == call.Id.Text).ToList();
             foreach (var fn in matches)
             {
+                // Check parameter counts.
                 if (fn.Params.Count == call.Args.Count)
                 {
-                    // Matching number of params.
-                    yield return fn;
+                    // Check parameter types.
+                    for (int i = 0; i < fn.Params.Count; i++)
+                    {
+                        var param = fn.Params[i];
+                        var arg = call.Args[i];
+
+                        var paramType = FindType(param.Type.Token);
+                        if (paramType == arg.TypeDecl)
+                            yield return fn;
+                    }
                 }
             }
         }

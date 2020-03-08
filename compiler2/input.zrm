@@ -44,6 +44,12 @@ fn main() {
 }
 */
 
+type String {
+    #cpp("const char* raw;");
+    #cpp("#__String(const std::string& raw) { 
+        this->raw = raw.c_str(); }");
+}
+
 type Int {
     #cpp("mpz_t raw;");
     #cpp("#__Int(const std::string& from, const int& base) 
@@ -51,9 +57,8 @@ type Int {
     #cpp("~#__Int() { mpz_clear(raw); }");
 }
 
-fn test() {
-
-}
+fn test(Int x) {}
+fn test(String x) {}
 
 fn main() {
     test(1);
