@@ -1,3 +1,4 @@
+/*
 type String {
     #cpp("const char* raw;");
     #cpp("#__String(const std::string& raw) { 
@@ -40,4 +41,20 @@ fn println(String str) {
 
 fn main() {
     println("Hello World!");
+}
+*/
+
+type Int {
+    #cpp("mpz_t raw;");
+    #cpp("#__Int(const std::string& from, const int& base) 
+        { mpz_init_set_str(raw, from.c_str(), base); }");
+    #cpp("~#__Int() { mpz_clear(raw); }");
+}
+
+fn test() {
+
+}
+
+fn main() {
+    test(1);
 }

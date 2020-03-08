@@ -33,12 +33,16 @@ namespace compiler2
 
             Console.WriteLine("Transpiling...");
             var compiler = new Compiler();
+            bool success;
             var sw1 = Stopwatch.StartNew();
             using (var outStream = new StreamWriter("bin/ir.cpp"))
-                compiler.Write(ast, outStream);
+                success = compiler.Write(ast, outStream);
             sw1.Stop();
 
             Console.WriteLine($"Transpiled: {sw1.ElapsedMilliseconds} ms");
+
+            if (!success)
+                File.Delete("bin/ir.cpp");
         }
     }
 }

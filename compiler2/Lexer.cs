@@ -52,11 +52,19 @@ namespace compiler2
         private char Next()
         {
             var next = stream.Read();
-            col += 1;
             if (next == -1)
                 throw new LexerFinishException();
 
-            return (char)next;
+            var c = (char)next;
+            if (c == '\n')
+            {
+                line += 1;
+                col = 0;
+            }
+            else
+                col += 1;
+
+            return c;
         }
 
         private IEnumerable<Token?> RawTokens()
@@ -75,8 +83,6 @@ namespace compiler2
                 else if (c == '\n')
                 {
                     yield return Finish();
-                    line += 1;
-                    col = 0;
                 }
                 else if (c == ' ')
                 {

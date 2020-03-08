@@ -9,7 +9,7 @@ namespace compiler2
     public class CompileError : Exception 
     {
         public CompileError(Token t, string? message = null) : base(
-            $"Line {t.Line}, Col {t.Col}:\n{message}") { }
+            $"Line {t.Line}, Col {t.Col}\n{message}") { }
     }
 
     public class Compiler
@@ -18,18 +18,20 @@ namespace compiler2
 
         public static ast.Program Ast = new ast.Program();
 
-        public void Write(ast.Program ast, StreamWriter stream)
+        public bool Write(ast.Program ast, StreamWriter stream)
         {
             Ast = ast;
 
             try
             {
                 ast.Emit(stream);
+                return true;
             }
             catch (CompileError err)
             {
                 Console.WriteLine("Error compiling the program: ");
                 Console.WriteLine(err.ToString());
+                return false;
             }
         }
     }
@@ -154,22 +156,31 @@ typedef int {Compiler.Prefix}__int;
         {
             Console.WriteLine($"FindFn: {this}, {call}");
 
-            var matches = FnDecls.Where(x => x.Id.Text == call.Id.Text).ToList();
+            var matches = FindMatchingSignatures(call).ToList();
             if (matches.Count == 0)
             {
                 if (Parent == null)
                     throw new CompileError(call.Token,
                         $"No matching function for {call}");
-
                 return Parent.FindFn(call);
             }
             else if (matches.Count > 1)
-            {
-                // TODO: do signature matching.
                 throw new NotImplementedException();
-            }
             else
-                return (FnDecl)matches[0];
+                return matches[0];
+        }
+
+        public IEnumerable<FnDecl> FindMatchingSignatures(FnCall call)
+        {
+            var matches = FnDecls.Where(x => x.Id.Text == call.Id.Text).ToList();
+            foreach (var fn in matches)
+            {
+                if (fn.Params.Count == call.Args.Count)
+                {
+                    // Matching number of params.
+                    yield return fn;
+                }
+            }
         }
     }
 
