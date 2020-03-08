@@ -1,14 +1,14 @@
 type String {
-    #cpp("__ZERM__String(std::string cstring) { this->cstring = cstring; }");
+    #cpp("#__String(std::string cstring) { this->cstring = cstring; }");
     #cpp("std::string cstring;");
 }
 
 fn print(String str) {
-    #cpp("std::cout << __ZERM__str.cstring << std::endl;");
+    #cpp("std::cout << #__str.cstring << std::endl;");
 }
 
 fn printNum(__int x) {
-    #cpp("std::cout << __ZERM__x << std::endl;");
+    #cpp("std::cout << #__x << std::endl;");
 }
 
 fn main() {

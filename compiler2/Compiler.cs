@@ -14,7 +14,7 @@ namespace compiler2
 
     public class Compiler
     {
-        public const string Prefix = "__ZERM__";
+        public const string Prefix = "_ZRM_";
 
         public static ast.Program Ast = new ast.Program();
 
@@ -69,15 +69,16 @@ namespace compiler2.ast
 
             // Emit a preamble to wrap C++:
             stream.Write(
-@"#include <iostream>
+$@"#include <iostream>
+#include <gmp.h>
 #include <string>
-typedef int __ZERM____int;
+typedef int {Compiler.Prefix}__int;
 ");
                 
             Body?.Emit(stream);
 
             stream.Write(
-                "\nint main(){__ZERM__main__();}");
+                $"\nint main(){{{Compiler.Prefix}main__();}}");
         }
     }
 
@@ -102,6 +103,11 @@ typedef int __ZERM____int;
 
         public void Emit(StreamWriter stream)
         {
+            // If this is the global block, don't allow statements.
+            if (Parent == null && Stmts.Count > 0)
+                throw new CompileError(Stmts.First().Token,
+                $"Statements not allowed in the global block");
+
             var typeDeclIds = new HashSet<string>();
             foreach (var decl in TypeDecls)
             {
@@ -193,7 +199,8 @@ typedef int __ZERM____int;
 
         public void EmitForwardDeclaration(StreamWriter stream)
         {
-            stream.Write("struct __ZERM__");
+            stream.Write("struct ");
+            stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
 
             stream.WriteLine('{');
@@ -254,7 +261,7 @@ typedef int __ZERM____int;
             // Append __ZERM__ to the front of the identifier 
             // and also a return suffix because our languages counts 
             // return type in a function signature.
-            stream.Write("__ZERM__");
+            stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
             stream.Write("__");
             stream.Write(ReturnType?.ToString());
@@ -373,6 +380,8 @@ typedef int __ZERM____int;
             Block = block;
         }
 
+        public abstract Token Token { get; }
+
         abstract public void Show();
 
         public abstract void Emit(StreamWriter stream);
@@ -381,6 +390,8 @@ typedef int __ZERM____int;
     public class ExprStmt : Stmt
     {
         public Expr Expr;
+
+        public override Token Token => Expr.Token;
 
         public ExprStmt(Block block, Expr expr) : base(block)
         {
@@ -447,21 +458,7 @@ typedef int __ZERM____int;
             // Write function identifier:
             if (Id.Text.StartsWith('#'))
             {
-                if (Id.Text == "#cpp")
-                {
-                    // Writes C++ code directly, like a macro.
-                    foreach (var arg in Args)
-                    {
-                        if (arg is StrExpr expr)
-                            stream.Write(
-                                expr.Value.Text.Substring(1, expr.Value.Text.Length - 2));
-                        else
-                        {
-                            throw new CompileError(arg.Token,
-                                "#cpp only takes string arguments.");
-                        }
-                    }
-                }
+                Metafunctions.Emit(stream, this);
             }
             else
             {
@@ -630,6 +627,8 @@ typedef int __ZERM____int;
     {
         public Token Id;
         public Expr Value;
+
+        public override Token Token => Id;
 
         public Assn(Block block, Token id, Expr value) : base(block)
         {
