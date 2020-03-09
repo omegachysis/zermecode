@@ -1,0 +1,52 @@
+
+PROOFS for objects that could have pointers to them:
+Consider the following problem:
+
+fn mess_with(*Int a) {
+    // copy the mutable pointer to something else
+}
+
+fn main() {
+    x := 1;
+    mess_with(x);
+    // So now we've released a pointer to x and can we say anything 
+    // about x anymore?
+}
+
+What if instead we have a propositional function that tracks that 
+a pointer hasn't been 'released'? Call it safe(...)
+
+fn no_problemo(MutRef<Int> a) {
+    // doesn't copy the pointer at all.
+    // we can still assert the following:
+    assert(safe(a));
+    // NICE
+}
+
+fn mess_with(MutRef<Int> a) {
+    // copy the mutable pointer to something else
+    // we can no longer assert safe(a).
+}
+
+fn main() {
+    x := 1;
+    no_problemo(MutRef(x));
+    // no_problemo borrows a mutable reference to 'x',
+    // so we loose some proof information, but we do have 
+    // safe(x) returned, so we can still retain provable info:
+    
+    assert(x = 1);
+    #prove(x = 1); // still holds!
+
+    mess_with(x);
+    // We lose proof info because of mess_with.
+    // but more importantly, we lose safe(x)!
+    assert(x = 1);
+    #prove(x = 1); // This doesn't hold, even on the next line!
+
+    // But how can we even use 'x' anymore if no proof information holds?
+    // The only way is to re-assert safe(x):
+    assert(safe(x)); // This check can't actually be done though, so use with caution.
+    assert(x = 1);
+    #prove(x = 1); // Holds now!
+}

@@ -13,7 +13,7 @@ fn increment(Int x) {
     x += 1; // ERROR: 'x' is immutably borrowed.
 }
 
-fn increment(Int& x) {
+fn increment(&Int x) {
     x += 1;
 }
 
@@ -26,7 +26,7 @@ fn main3() {
     notice(b = 2);
 }
 
-fn steal(Int* x) { }
+fn steal(*Int x) { }
 
 fn main4() {
     a := 1;
@@ -35,6 +35,6 @@ fn main4() {
     b = square(a); //ERROR: 'a' is transferred ownership to 'steal(a)'.
 
     b := 1;
-    steal(b'); // makes a copy of 'b'
+    steal(b%); // makes a copy of 'b'
     c = square(b);
 }

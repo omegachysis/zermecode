@@ -50,12 +50,18 @@ fn main(Int x) -> Int {
 
 }
 
-fn increment(Int& x) {
+fn increment(&Int x) {
     x += 1;
 }
 
 fn main() {
     x = 2;
     increment(x); // ERROR
-    increment(x := 2);
+    increment(let x := 2); // Inline assignment.
 }
+
+let x := 2 is functionally the same as x := 2,
+except it also returns the value of the lhs of the assignment.
+
+
+
