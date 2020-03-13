@@ -557,6 +557,7 @@ typedef int {Compiler.Prefix}__int;
     public enum NumLiteralType
     {
         Int,
+        Rat,
         Float32,
     }
     
@@ -578,6 +579,12 @@ typedef int {Compiler.Prefix}__int;
                     literal.Text = "Int";
                     return Block.FindType(literal);
                 }
+                else if (LitType == NumLiteralType.Rat)
+                {
+                    var literal = Value;
+                    literal.Text = "Rat";
+                    return Block.FindType(literal);
+                }
                 else if (LitType == NumLiteralType.Float32)
                 {
                     var literal = Value;
@@ -595,6 +602,8 @@ typedef int {Compiler.Prefix}__int;
             
             if (value.Text.EndsWith("f"))
                 LitType = NumLiteralType.Float32;
+            else if (value.Text.Contains('.') || value.Text.EndsWith("r"))
+                LitType = NumLiteralType.Rat;
             else
                 LitType = NumLiteralType.Int;
         }
@@ -614,16 +623,29 @@ typedef int {Compiler.Prefix}__int;
             if (LitType == NumLiteralType.Int)
             {
                 // _ZRM_Int("str", base)
-                stream.Write(Compiler.Prefix);
-                stream.Write("Int(\"");
+                stream.Write(Compiler.Prefix); stream.Write("Int(\"");
                 stream.Write(Value.Text.Replace("_", ""));
+                stream.Write("\",10)");
+            }
+            else if (LitType == NumLiteralType.Rat)
+            {
+                // _ZRM_Rat("str", base)
+                var text = Value.Text.Replace("r", "");
+                if (text.Contains('.'))
+                {
+                    // e.g. 0.1, index of '.' is 1, so 10^1 goes on the denom.
+                    var denom = "1" + new string('0', text.IndexOf('.'));
+                    text = text.Replace(".", "") + "/" + denom;
+                }
+
+                stream.Write(Compiler.Prefix); stream.Write("Rat(\"");
+                stream.Write(text);
                 stream.Write("\",10)");
             }
             else if (LitType == NumLiteralType.Float32)
             {
                 // _ZRM_Float32(val)
-                stream.Write(Compiler.Prefix);
-                stream.Write("Float32(");
+                stream.Write(Compiler.Prefix); stream.Write("Float32(");
                 stream.Write(Value.Text.Replace("_", ""));
                 stream.Write(')');
             }

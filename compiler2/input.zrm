@@ -18,8 +18,9 @@ type Float64 {
 
 type Rat {
     #cpp("mpq_t raw;");
+    #cpp("#__Rat() { mpq_init(raw); }");
     #cpp("#__Rat(const std::string& from, const int& base) 
-        { mpq_set_str(raw, from.c_str(), base); }");
+        { mpq_init(raw); mpq_set_str(raw, from.c_str(), base); mpq_canonicalize(raw); }");
     #cpp("~#__Rat() { mpq_clear(raw); }");
 }
 
@@ -106,6 +107,10 @@ fn print(Float32 x) {
     #cpp("std::cout << #__x.raw;");
 }
 
+fn print(Rat x) {
+    #cpp("std::cout << #__x.raw;");
+}
+
 fn main() {
-    print(0.1f ^ 8.0f);
+    print(1.668);
 }
