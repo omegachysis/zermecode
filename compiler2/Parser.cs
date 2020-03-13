@@ -89,20 +89,16 @@ namespace compiler2
                             throw new ParseError(t2, "Expected ';'");
 
                         var stmt = new ast.ExprStmt(block!, fnCall);
-                        stmt.Show();
                         block!.Stmts.Add(stmt);
                     }
                     else if (t1.Id == TokenId.Eq)
                     {
                         // Assignment.
-                        Console.WriteLine("Assignment");
-
                         var rhs = ParseExpr(Next(), out var la);
                         if (la.Id != TokenId.Semi)
                             throw new ParseError(la, "Expected ';'");
 
                         var assn = new ast.Assn(block!, t, rhs);
-                        assn.Show();
                         block!.Stmts.Add(assn);
                     }
                     else
@@ -119,8 +115,6 @@ namespace compiler2
 
         private ast.TypeDecl ParseTypeDecl()
         {
-            Console.WriteLine("Type decl");
-
             // Type ID:
             Token t = Next();
             if (t.Id != TokenId.Id)
@@ -139,8 +133,6 @@ namespace compiler2
 
         private ast.FnDecl ParseFnDecl()
         {
-            Console.WriteLine("Function decl");
-
             // Function ID:
             Token t = Next();
             if (t.Id != TokenId.Id)
@@ -207,8 +199,6 @@ namespace compiler2
 
         private ast.FnCall ParseFnCall(Token fnId)
         {
-            Console.WriteLine("Function call");
-
             var args = new List<ast.Expr>();
             while (true)
             {
@@ -254,8 +244,6 @@ namespace compiler2
 
         private ast.Expr ParseExpr(Token t, out Token la)
         {
-            Console.WriteLine("Expr");
-
             var l = ParseTerm(t, out var la1);
 
             while (la1.Id == TokenId.Op && (
@@ -273,8 +261,6 @@ namespace compiler2
 
         private ast.Expr ParseTerm(Token t, out Token la)
         {
-            Console.WriteLine("Term");
-
             var l = ParseFactor(t, out var la1);
             var term = l;
 
@@ -293,8 +279,6 @@ namespace compiler2
 
         private ast.Expr ParseFactor(Token t, out Token la)
         {
-            Console.WriteLine("Factor");
-
             var l = ParseExponential(t, out var la1);
             var term = l;
 
@@ -312,8 +296,6 @@ namespace compiler2
 
         private ast.Expr ParseExponential(Token t, out Token la)
         {
-            Console.WriteLine("Exponential");
-
             if (t.Id == TokenId.Id)
             {
                 // Could be a function call.
@@ -379,7 +361,6 @@ namespace compiler2
             var success = tokens.MoveNext();
             if (!success)
                 return new Token(TokenId.Eof, 0, 0);
-            Console.WriteLine(" >> " + tokens.Current);
             return tokens.Current;
         }
     }
