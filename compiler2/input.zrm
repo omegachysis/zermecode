@@ -21,7 +21,6 @@ type Rat {
     #cpp("#__Rat() { mpq_init(raw); }");
     #cpp("#__Rat(const std::string& from, const int& base) 
         { mpq_init(raw); mpq_set_str(raw, from.c_str(), base); mpq_canonicalize(raw); }");
-    #cpp("~#__Rat() { mpq_clear(raw); }");
 }
 
 type Int {
@@ -29,7 +28,6 @@ type Int {
     #cpp("#__Int() { mpz_init(raw); }");
     #cpp("#__Int(const std::string& from, const int& base) 
         { mpz_init_set_str(raw, from.c_str(), base); }");
-    #cpp("~#__Int() { mpz_clear(raw); }");
 }
 
 fn op+(Int a, Int b) -> Int {
@@ -112,9 +110,8 @@ fn print(Rat x) {
 }
 
 fn main() {
-    
-    x = 8;
-    y = 5;
-    print(x ^ y);
+    x = 7;
+    x = 132;
+    print(x);
 
 }

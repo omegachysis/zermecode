@@ -51,4 +51,6 @@ public enum TokenId
     Return,
     Type,
     Dot,
+    Assign,
+    Colon,
 }

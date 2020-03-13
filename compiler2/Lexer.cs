@@ -169,6 +169,18 @@ namespace compiler2
                         goto Backtrack;
                     }
                 }
+                else if (c == ':')
+                {
+                    yield return Finish();
+                    c = Next();
+                    if (c == '=')
+                        yield return new Token(TokenId.Assign, line, col - 2);
+                    else
+                    {
+                        yield return new Token(TokenId.Colon, line, col - 1);
+                        goto Backtrack;
+                    }
+                }
                 else if (c == '=')
                 {
                     yield return Finish();

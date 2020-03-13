@@ -91,25 +91,26 @@ namespace compiler2
                         var stmt = new ast.ExprStmt(block!, fnCall);
                         block!.Stmts.Add(stmt);
                     }
-                    else if (t1.Id == TokenId.Eq)
+                    else if (t1.Id == TokenId.Eq || t1.Id == TokenId.Assign)
                     {
-                        // Assignment.
+                        // Assignment (mutable or immutable).
                         var rhs = ParseExpr(Next(), out var la);
                         if (la.Id != TokenId.Semi)
                             throw new ParseError(la, "Expected ';'");
 
-                        var assn = new ast.Assn(block!, t, rhs);
+                        var assn = new ast.Assn(block!, t, rhs,
+                            mutable: t1.Id == TokenId.Assign);
                         block!.Stmts.Add(assn);
                     }
                     else
-                        throw new NotImplementedException();
+                        throw new ParseError(t, "Expected '=' or ':='");
                 }
                 else if (t.Id == TokenId.End)
                 {
                     return blocks.Pop();
                 }
                 else
-                    throw new ParseError(t, "Expected '}', assignment, or statement.");
+                    throw new ParseError(t, "Expected '}', assignment, or statement");
             }
         }
 

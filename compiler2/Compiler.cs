@@ -92,16 +92,22 @@ typedef int {Compiler.Prefix}__int;
         public string Name;
         public string CName;
         public TypeSpec TypeSpec;
+        public bool Mutable;
 
-        public VarDecl(Block block, string name, TypeSpec typeSpec)
+        public VarDecl(Block block, string name, TypeSpec typeSpec, bool mutable)
         {
             if (block.FindVar(new VarExpr(block, name), throws: false) != null)
+            {
+                if (mutable)
+                    throw new InvalidOperationException("Already defined");
                 CName = "x" + block.Vars[name].CName;
+            }
             else
                 CName = Compiler.Prefix + name;
 
             Name = name;
             TypeSpec = typeSpec;
+            Mutable = mutable;
             block.Vars[name] = this;
         }
     }
@@ -504,7 +510,7 @@ typedef int {Compiler.Prefix}__int;
         public override void Emit(StreamWriter stream)
         {
             Expr.Emit(stream);
-            stream.Write("\n;");
+            stream.WriteLine(";");
         }
     }
 
@@ -691,8 +697,11 @@ typedef int {Compiler.Prefix}__int;
             {
                 // _ZRM_Float32(val)
                 stream.Write(Compiler.Prefix); stream.Write("Float32(");
-                stream.Write(Value.Text.Replace("_", ""));
-                stream.Write(')');
+                var text = Value.Text.Replace("_", "");
+                if (!text.Contains('.'))
+                    text += ".0";
+                stream.Write(text.Replace("f", ""));
+                stream.Write("f)");
             }
             else 
                 throw new NotImplementedException();   
@@ -785,15 +794,17 @@ typedef int {Compiler.Prefix}__int;
 
     public class Assn : Stmt
     {
-        public Token Id;
-        public Expr Value;
+        public readonly Token Id;
+        public readonly Expr Value;
+        public readonly bool Mutable;
 
         public override Token Token => Id;
 
-        public Assn(Block block, Token id, Expr value) : base(block)
+        public Assn(Block block, Token id, Expr value, bool mutable) : base(block)
         {
             Id = id;
             Value = value;
+            Mutable = mutable;
         }
 
         public override void Show()
@@ -803,23 +814,60 @@ typedef int {Compiler.Prefix}__int;
 
         public override string ToString()
         {
-            return $"[A:{Id.Text} = {Value}]";
+            var op = Mutable ? ":=" : "=";
+            return $"[A:{Id.Text} {op} {Value}]";
         }
 
         public override void Emit(StreamWriter stream)
         {
-            // Add a new variable declaration.
-            var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
-            var decl = new VarDecl(Block, name: Id.Text, typeSpec);
-            
-            // Write type declaration for C++:
-            stream.Write("const ");
-            decl.TypeSpec.Emit(stream);
-            stream.Write(' ');
-            stream.Write(decl.CName);
-            stream.Write('=');
-            Value.Emit(stream);
-            stream.WriteLine(';');
+            if (!Mutable)
+            {
+                // Add a new variable declaration.
+                var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
+                var decl = new VarDecl(Block, name: Id.Text, typeSpec, mutable: false);
+                
+                // Write type declaration for C++:
+                stream.Write("const ");
+                decl.TypeSpec.Emit(stream);
+                stream.Write(' ');
+                stream.Write(decl.CName);
+                stream.Write('=');
+                Value.Emit(stream);
+                stream.WriteLine(';');
+            }
+            else 
+            {
+                var decl = Block.FindVar(
+                    new VarExpr(Block, Id), throws: false
+                );
+
+                if (decl.HasValue && decl.Value.Mutable)
+                {
+                    // Reassignment of variable.
+                    var lhsType = Block.FindType(decl.Value.TypeSpec);
+                    var rhsType = Value.TypeDecl;
+                    if (lhsType != Value.TypeDecl)
+                        throw new CompileError(Value.Token,
+                        $"Cannot assign type '{rhsType}' to '{lhsType}'");
+
+                    stream.Write(decl.Value.CName);
+                    stream.Write('=');
+                    Value.Emit(stream);
+                    stream.WriteLine(';');
+                }
+                else
+                {
+                    // Declaration of mutable variable.
+                    var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
+                    decl = new VarDecl(Block, name: Id.Text, typeSpec, mutable: false);
+                    decl.Value.TypeSpec.Emit(stream);
+                    stream.Write(' ');
+                    stream.Write(decl.Value.CName);
+                    stream.Write('=');
+                    Value.Emit(stream);
+                    stream.WriteLine(';');
+                }
+            }
         }
     }
 }
