@@ -97,11 +97,7 @@ typedef int {Compiler.Prefix}__int;
         public VarDecl(Block block, string name, TypeSpec typeSpec, bool mutable)
         {
             if (block.FindVar(new VarExpr(block, name), throws: false) != null)
-            {
-                if (mutable)
-                    throw new InvalidOperationException("Already defined");
                 CName = "x" + block.Vars[name].CName;
-            }
             else
                 CName = Compiler.Prefix + name;
 
@@ -820,54 +816,21 @@ typedef int {Compiler.Prefix}__int;
 
         public override void Emit(StreamWriter stream)
         {
+            var decl = Block.FindVar(
+                new VarExpr(Block, Id), throws: false
+            );
+
+            // Declaration of a variable.
+            var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
+            decl = new VarDecl(Block, name: Id.Text, typeSpec, mutable: false);
             if (!Mutable)
-            {
-                // Add a new variable declaration.
-                var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
-                var decl = new VarDecl(Block, name: Id.Text, typeSpec, mutable: false);
-                
-                // Write type declaration for C++:
                 stream.Write("const ");
-                decl.TypeSpec.Emit(stream);
-                stream.Write(' ');
-                stream.Write(decl.CName);
-                stream.Write('=');
-                Value.Emit(stream);
-                stream.WriteLine(';');
-            }
-            else 
-            {
-                var decl = Block.FindVar(
-                    new VarExpr(Block, Id), throws: false
-                );
-
-                if (decl.HasValue && decl.Value.Mutable)
-                {
-                    // Reassignment of variable.
-                    var lhsType = Block.FindType(decl.Value.TypeSpec);
-                    var rhsType = Value.TypeDecl;
-                    if (lhsType != Value.TypeDecl)
-                        throw new CompileError(Value.Token,
-                        $"Cannot assign type '{rhsType}' to '{lhsType}'");
-
-                    stream.Write(decl.Value.CName);
-                    stream.Write('=');
-                    Value.Emit(stream);
-                    stream.WriteLine(';');
-                }
-                else
-                {
-                    // Declaration of mutable variable.
-                    var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
-                    decl = new VarDecl(Block, name: Id.Text, typeSpec, mutable: false);
-                    decl.Value.TypeSpec.Emit(stream);
-                    stream.Write(' ');
-                    stream.Write(decl.Value.CName);
-                    stream.Write('=');
-                    Value.Emit(stream);
-                    stream.WriteLine(';');
-                }
-            }
+            decl.Value.TypeSpec.Emit(stream);
+            stream.Write(' ');
+            stream.Write(decl.Value.CName);
+            stream.Write('=');
+            Value.Emit(stream);
+            stream.WriteLine(';');
         }
     }
 }
