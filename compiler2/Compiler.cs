@@ -87,6 +87,25 @@ typedef int {Compiler.Prefix}__int;
         }
     }
 
+    public struct VarDecl
+    {
+        public string Name;
+        public string CName;
+        public TypeSpec TypeSpec;
+
+        public VarDecl(Block block, string name, TypeSpec typeSpec)
+        {
+            if (block.FindVar(new VarExpr(block, name), throws: false) != null)
+                CName = "x" + block.Vars[name].CName;
+            else
+                CName = Compiler.Prefix + name;
+
+            Name = name;
+            TypeSpec = typeSpec;
+            block.Vars[name] = this;
+        }
+    }
+
     public class Block
     {
         public Token Token;
@@ -95,6 +114,9 @@ typedef int {Compiler.Prefix}__int;
         public HashSet<FnDecl> FnDecls = new HashSet<ast.FnDecl>();
         public List<Stmt> Stmts = new List<ast.Stmt>();
         public Block? Parent;
+
+        public Dictionary<string, VarDecl> Vars = 
+            new Dictionary<string, VarDecl>();
 
         public Block(Token token, Block? parent)
         {
@@ -138,16 +160,36 @@ typedef int {Compiler.Prefix}__int;
                 stmt.Emit(stream);
         }
 
-        public TypeDecl FindType(Token id)
+        public VarDecl? FindVar(VarExpr expr, bool throws)
         {
-            var matches = TypeDecls.Where(x => x.Id.Text == id.Text).ToList();
+            var matches = Vars.Where(x => x.Key == expr.Token.Text).ToList();
             if (matches.Count == 0)
             {
                 if (Parent == null)
-                    throw new CompileError(id,
-                        $"No matching type for {id}");
+                {
+                    if (throws)
+                        throw new CompileError(expr.Token,
+                            $"Unknown variable {expr.Token}");
+                    else 
+                        return null;
+                }
 
-                return Parent.FindType(id);
+                return Parent.FindVar(expr, throws);
+            }
+            else
+                return matches.Single().Value;
+        }
+
+        public TypeDecl FindType(TypeSpec spec)
+        {
+            var matches = TypeDecls.Where(x => x.Id.Text == spec.Token.Text).ToList();
+            if (matches.Count == 0)
+            {
+                if (Parent == null)
+                    throw new CompileError(spec.Token,
+                        $"No matching type for {spec}");
+
+                return Parent.FindType(spec);
             }
             else
                 return matches.Single();
@@ -183,7 +225,7 @@ typedef int {Compiler.Prefix}__int;
                         var param = fn.Params[i];
                         var arg = call.Args[i];
 
-                        var paramType = FindType(param.Type.Token);
+                        var paramType = FindType(param.Type);
                         if (paramType != arg.TypeDecl)
                             all = false;
                     }
@@ -500,7 +542,7 @@ typedef int {Compiler.Prefix}__int;
                 var fn = FnDecl;
                 if (fn.ReturnType is null)
                     throw new CompileError(Token, "Cannot use return 'void' function");
-                return Block.FindType(fn.ReturnType.Token);
+                return Block.FindType(fn.ReturnType);
             }
         }
 
@@ -577,19 +619,19 @@ typedef int {Compiler.Prefix}__int;
                 {
                     var literal = Value;
                     literal.Text = "Int";
-                    return Block.FindType(literal);
+                    return Block.FindType(new SimpleTypeSpec(literal));
                 }
                 else if (LitType == NumLiteralType.Rat)
                 {
                     var literal = Value;
                     literal.Text = "Rat";
-                    return Block.FindType(literal);
+                    return Block.FindType(new SimpleTypeSpec(literal));
                 }
                 else if (LitType == NumLiteralType.Float32)
                 {
                     var literal = Value;
                     literal.Text = "Float32";
-                    return Block.FindType(literal);
+                    return Block.FindType(new SimpleTypeSpec(literal));
                 }
                 else 
                     throw new NotImplementedException();
@@ -664,13 +706,19 @@ typedef int {Compiler.Prefix}__int;
         {
             get
             {
-                throw new NotImplementedException();
+                var varDecl = Block.FindVar(this, throws: true)!.Value;
+                return Block.FindType(varDecl.TypeSpec);
             }
         }
 
         public VarExpr(Block block, Token value) : base(block)
         {
             Value = value;
+        }
+
+        public VarExpr(Block block, string name) : base(block)
+        {
+            Value = new Token(TokenId.Id, name, 0, 0);
         }
 
         public override void Show()
@@ -685,7 +733,8 @@ typedef int {Compiler.Prefix}__int;
 
         public override void Emit(StreamWriter stream)
         {
-            throw new NotImplementedException();
+            var varDecl = Block.FindVar(this, throws: true)!.Value;
+            stream.Write(varDecl.CName);
         }
     }
 
@@ -701,7 +750,7 @@ typedef int {Compiler.Prefix}__int;
             {
                 var literal = Value;
                 literal.Text = "String";
-                return Block.FindType(literal);
+                return Block.FindType(new SimpleTypeSpec(literal));
             }
         }
 
@@ -756,7 +805,18 @@ typedef int {Compiler.Prefix}__int;
 
         public override void Emit(StreamWriter stream)
         {
-            throw new NotImplementedException();
+            // Add a new variable declaration.
+            var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
+            var decl = new VarDecl(Block, name: Id.Text, typeSpec);
+            
+            // Write type declaration for C++:
+            stream.Write("const ");
+            decl.TypeSpec.Emit(stream);
+            stream.Write(' ');
+            stream.Write(decl.CName);
+            stream.Write('=');
+            Value.Emit(stream);
+            stream.WriteLine(';');
         }
     }
 }

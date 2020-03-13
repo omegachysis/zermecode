@@ -112,5 +112,9 @@ fn print(Rat x) {
 }
 
 fn main() {
-    print(1.668);
+    
+    x = 1;
+    x = "Hello World!";
+    println(x);
+
 }
