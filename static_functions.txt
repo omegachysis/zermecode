@@ -1,0 +1,21 @@
+
+type Thing {
+    Int x := 0;
+
+    fn This::test() {
+        println("Static function");
+    }
+}
+
+fn main() {
+    Thing::test(); // Call to a static function
+
+    Thing thing;
+    thing.x := 1;
+
+    Thing* thing_ref = thing:*;
+    println(thing_ref.x); // Prints '1'
+
+    Thing& thing_mutref = thing:&;
+    thing_mutref := 2;
+}
