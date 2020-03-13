@@ -113,8 +113,8 @@ fn print(Rat x) {
 
 fn main() {
     
-    x = 1;
-    x = "Hello World!";
-    println(x);
+    x = 8;
+    y = 5;
+    print(x ^ y);
 
 }

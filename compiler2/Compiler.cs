@@ -227,7 +227,10 @@ typedef int {Compiler.Prefix}__int;
 
                         var paramType = FindType(param.Type);
                         if (paramType != arg.TypeDecl)
+                        {
                             all = false;
+                            break;
+                        }
                     }
 
                     if (all)
