@@ -50,3 +50,18 @@ fn main() {
     assert(x = 1);
     #prove(x = 1); // Holds now!
 }
+
+fn test(Int& x) { ... }
+
+fn main() {
+    x := 1;
+    Int& x = x:&;
+
+    #prove(!safe(x));
+
+    #assert(alive(x))
+    lock(x) {
+        #prove(safe(x));
+        test(x);
+    }
+}
