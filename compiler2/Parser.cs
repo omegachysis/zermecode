@@ -105,6 +105,12 @@ namespace compiler2
                     else
                         throw new ParseError(t, "Expected '=' or ':='");
                 }
+                else if (t.Id == TokenId.Return)
+                {
+                    // Return statement.
+                    var expr = ParseExpr(Next(), out var la);
+                    block!.Stmts.Add(new ast.ReturnStmt(block!, expr));
+                }
                 else if (t.Id == TokenId.End)
                 {
                     return blocks.Pop();
@@ -117,19 +123,15 @@ namespace compiler2
         private ast.TypeDecl ParseTypeDecl()
         {
             // Type ID:
-            Token t = Next();
-            if (t.Id != TokenId.Id)
-                throw new ParseError(t, "Expected identifier");
-            var type = new ast.TypeDecl(block!, t);
-
-            t = Next();
+            Token tId = Next();
+            if (tId.Id != TokenId.Id)
+                throw new ParseError(tId, "Expected identifier");
+                
+            var t = Next();
             if (t.Id != TokenId.Begin)
                 throw new ParseError(t, "Expected '{'");
 
-            // Block:
-            type.Body = ParseBlock();
-
-            return type;
+            return new ast.TypeDecl(block!, tId, ParseBlock());
         }
 
         private ast.FnDecl ParseFnDecl()
@@ -138,7 +140,6 @@ namespace compiler2
             Token t = Next();
             if (t.Id != TokenId.Id)
                 throw new ParseError(t, "Expected identifier");
-            var fn = new ast.FnDecl(block!, t);
             var tId = t;
 
             // Detect if this is an operator definition:
@@ -147,7 +148,7 @@ namespace compiler2
                 t = Next();
                 if (t.Id != TokenId.Op)
                     throw new ParseError(t, "Expected operator");
-                fn.Id.Text += t.Text;
+                tId.Text += t.Text;
             }
 
             t = Next();
@@ -156,6 +157,7 @@ namespace compiler2
 
             // Function arguments:
             var argIds = new HashSet<string>();
+            var parameters = new List<compiler2.ast.Param>();
             while (true)
             {
                 t = Next();
@@ -169,7 +171,7 @@ namespace compiler2
                 if (!argIds.Add(argId.Text))
                     throw new ParseError(argId, "Argument already defined");
 
-                fn.Params.Add(new compiler2.ast.Param(typeSpec, argId));
+                parameters.Add(new compiler2.ast.Param(typeSpec, argId));
 
                 t = Next();
                 if (t.Id == TokenId.RParen)
@@ -181,10 +183,11 @@ namespace compiler2
             }
 
             t = Next();
+            TypeSpec? returnType = null;
             if (t.Id == TokenId.RArrow)
             {
                 // Function return:
-                fn.ReturnType = ParseTypeSpec(Next());
+                returnType = ParseTypeSpec(Next());
 
                 t = Next();
             }
@@ -193,9 +196,7 @@ namespace compiler2
                 throw new ParseError(t, "Expected '{'");
 
             // Function block:
-            fn.Body = ParseBlock();
-
-            return fn;
+            return new ast.FnDecl(block!, tId, parameters, returnType, body: ParseBlock());
         }
 
         private ast.FnCall ParseFnCall(Token fnId)

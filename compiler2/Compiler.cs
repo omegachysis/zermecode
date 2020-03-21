@@ -77,10 +77,10 @@ $@"#include <iostream>
 #include <gmp.h>
 #include <math.h>
 #include <string>
-typedef int {Compiler.Prefix}__int;
 ");
                 
-            Body?.Emit(stream);
+            Body?.EmitDecl(stream);
+            Body?.EmitImpl(stream);
 
             stream.Write(
                 $"\nint main(){{{Compiler.Prefix}main__();}}");
@@ -117,6 +117,11 @@ typedef int {Compiler.Prefix}__int;
         public List<Stmt> Stmts = new List<ast.Stmt>();
         public Block? Parent;
 
+        /// <summary>
+        /// Refers to the parent declaration if this is a function or a type decl.
+        /// </summary>
+        public Decl? ParentDecl = null;
+
         public Dictionary<string, VarDecl> Vars = 
             new Dictionary<string, VarDecl>();
 
@@ -130,7 +135,7 @@ typedef int {Compiler.Prefix}__int;
             return $"[Bl:{Token}]";
         }
 
-        public void Emit(StreamWriter stream)
+        public void EmitDecl(StreamWriter stream)
         {
             // If this is the global block, don't allow statements.
             if (Parent == null && Stmts.Count > 0)
@@ -141,10 +146,8 @@ typedef int {Compiler.Prefix}__int;
             foreach (var decl in TypeDecls)
             {
                 typeDeclIds.Add(decl.Id.Text);
-                decl.EmitForwardDeclaration(stream);
+                decl.EmitDecl(stream);
             }
-            // foreach (var decl in TypeDecls)
-            //     decl.EmitImplementation(stream);
 
             foreach (var decl in FnDecls)
             {
@@ -154,10 +157,22 @@ typedef int {Compiler.Prefix}__int;
                     $"Type already declared in this scope with ID '{decl.Id.Text}'");
                 }
 
-                decl.EmitForwardDeclaration(stream);
+                decl.EmitForwardDecl(stream);
             }
+        }
+
+        public void EmitImpl(StreamWriter stream) 
+        {
+            // If this is the global block, don't allow statements.
+            if (Parent == null && Stmts.Count > 0)
+                throw new CompileError(Stmts.First().Token,
+                $"Statements not allowed in the global block");
+
+            foreach (var decl in TypeDecls)
+                decl.EmitImpl(stream);
+
             foreach (var decl in FnDecls)
-                decl.EmitImplementation(stream);
+                decl.EmitImpl(stream);
             foreach (var stmt in Stmts)
                 stmt.Emit(stream);
         }
@@ -258,13 +273,17 @@ typedef int {Compiler.Prefix}__int;
 
     public class TypeDecl : Decl
     {
-        public Block? Body = null;
+        public Block Body;
 
-        public TypeDecl(Block block, Token id) : base(block, id) {}
+        public TypeDecl(Block block, Token id, Block body) : base(block, id) 
+        {
+            Body = body;
+            Body.ParentDecl = this;
+        }
 
         public override bool Equals(object? obj)
         {
-            return obj is FnDecl decl &&
+            return obj is TypeDecl decl &&
                 Id.Text == decl.Id.Text;
         }
 
@@ -283,25 +302,38 @@ typedef int {Compiler.Prefix}__int;
             return $"[TyD:{Id.Text}]";
         }
 
-        public void EmitForwardDeclaration(StreamWriter stream)
+        public void EmitDecl(StreamWriter stream)
         {
             stream.Write("struct ");
             stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
 
             stream.WriteLine('{');
-            Body?.Emit(stream);
+            Body?.EmitDecl(stream);
             stream.WriteLine("};\n");
+        }
+
+        public void EmitImpl(StreamWriter stream)
+        {
+            Body?.EmitImpl(stream);
         }
     }
 
     public class FnDecl : Decl
     {
-        public TypeSpec? ReturnType = null;
-        public List<Param> Params = new List<compiler2.ast.Param>();
-        public Block? Body = null;
+        public readonly TypeSpec? ReturnType;
+        public readonly List<Param> Params;
+        public readonly Block? Body = null;
 
-        public FnDecl(Block block, Token id) : base(block, id) {}
+        public FnDecl(Block block, Token id, 
+            List<Param> parameters, 
+            TypeSpec? returnType, Block body) : base(block, id) 
+        {
+            Params = parameters;
+            ReturnType = returnType;
+            Body = body;
+            Body.ParentDecl = this;
+        }
 
         public override bool Equals(object? obj)
         {
@@ -371,17 +403,17 @@ typedef int {Compiler.Prefix}__int;
             stream.Write(')');
         }
 
-        public void EmitForwardDeclaration(StreamWriter stream)
+        public void EmitForwardDecl(StreamWriter stream)
         {
             EmitPrototype(stream);
             stream.WriteLine(";\n");
         }
 
-        public void EmitImplementation(StreamWriter stream)
+        public void EmitImpl(StreamWriter stream)
         {
             EmitPrototype(stream);
             stream.WriteLine('{');
-            Body?.Emit(stream);
+            Body?.EmitImpl(stream);
             stream.WriteLine("}\n");
         }
     }
@@ -606,6 +638,7 @@ typedef int {Compiler.Prefix}__int;
         Int,
         Rat,
         Float32,
+        Int32,
     }
     
     public class NumExpr : Expr
@@ -651,6 +684,8 @@ typedef int {Compiler.Prefix}__int;
                 LitType = NumLiteralType.Float32;
             else if (value.Text.Contains('.') || value.Text.EndsWith("r"))
                 LitType = NumLiteralType.Rat;
+            else if (value.Text.EndsWith("i32"))
+                LitType = NumLiteralType.Int32;
             else
                 LitType = NumLiteralType.Int;
         }
@@ -698,6 +733,11 @@ typedef int {Compiler.Prefix}__int;
                     text += ".0";
                 stream.Write(text.Replace("f", ""));
                 stream.Write("f)");
+            }
+            else if (LitType == NumLiteralType.Int32)
+            {
+                // _ZRM_Int32(val)
+                throw new NotImplementedException();
             }
             else 
                 throw new NotImplementedException();   
@@ -820,6 +860,13 @@ typedef int {Compiler.Prefix}__int;
                 new VarExpr(Block, Id), throws: false
             );
 
+            if (decl.HasValue)
+            {
+                // We need to call the destructor on the old 
+                // value first.
+                throw new NotImplementedException();
+            }
+
             // Declaration of a variable.
             var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
             decl = new VarDecl(Block, name: Id.Text, typeSpec, mutable: false);
@@ -829,6 +876,35 @@ typedef int {Compiler.Prefix}__int;
             stream.Write(' ');
             stream.Write(decl.Value.CName);
             stream.Write('=');
+            Value.Emit(stream);
+            stream.WriteLine(';');
+        }
+    }
+
+    public class ReturnStmt : Stmt
+    {
+        public Expr Value;
+
+        public override Token Token => Value.Token;
+
+        public ReturnStmt(Block block, Expr value) : base(block)
+        {
+            Value = value;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[Ret:{Value}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            stream.Write("return ");
             Value.Emit(stream);
             stream.WriteLine(';');
         }
