@@ -108,8 +108,16 @@ namespace compiler2
                 else if (t.Id == TokenId.Return)
                 {
                     // Return statement.
-                    var expr = ParseExpr(Next(), out var la);
-                    block!.Stmts.Add(new ast.ReturnStmt(block!, expr));
+                    var t1 = Next();
+                    if (t1.Id == TokenId.Semi)
+                        block!.Stmts.Add(new ast.ReturnStmt(
+                            block!, returnKeyword: t, value: null));
+                    else
+                    {
+                        var expr = ParseExpr(t1, out var la);
+                        block!.Stmts.Add(new ast.ReturnStmt(
+                            block!, returnKeyword: t, value: expr));
+                    }
                 }
                 else if (t.Id == TokenId.End)
                 {

@@ -1,5 +1,9 @@
-fn test(Int x) {
-    return x;   
+type Int {
+
+}
+
+fn test(Int x) -> Int {
+    return;
 }
 
 fn main() {

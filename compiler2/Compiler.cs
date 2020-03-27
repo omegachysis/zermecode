@@ -400,6 +400,9 @@ $@"#include <iostream>
 
             foreach (var param in Params.Take(Params.Count - 1))
             {
+                // Check to make sure there is a matching type for the parameter.
+                Block.FindType(param.Type);
+
                 param.Emit(stream);
                 stream.Write(',');
             }
@@ -885,12 +888,13 @@ $@"#include <iostream>
 
     public class ReturnStmt : Stmt
     {
-        public Expr Value;
+        public Expr? Value;
 
-        public override Token Token => Value.Token;
+        public override Token Token { get; }
 
-        public ReturnStmt(Block block, Expr value) : base(block)
+        public ReturnStmt(Block block, Token returnKeyword, Expr? value) : base(block)
         {
+            Token = returnKeyword;
             Value = value;
         }
 
@@ -906,8 +910,31 @@ $@"#include <iostream>
 
         public override void Emit(StreamWriter stream)
         {
+            // Check that we are in a fn decl.
+            if (Block.ParentDecl is FnDecl fn)
+            {
+                if (fn.ReturnType == null)
+                {
+                    if (Value != null)
+                        throw new CompileError(Value.Token,
+                            "Cannot return expression from 'void' procedure");
+                }
+                else
+                {
+                    if (Value == null)
+                        throw new CompileError(Token, 
+                            "Function must return a value");
+                    else if (Value.TypeDecl != fn.Block.FindType(fn.ReturnType))
+                        throw new CompileError(Value.Token,
+                            "Expression does not match function's return type");
+                }
+            }
+            else
+                throw new CompileError(Token,
+                    "Cannot return from outside a function");
+
             stream.Write("return ");
-            Value.Emit(stream);
+            Value?.Emit(stream);
             stream.WriteLine(';');
         }
     }
