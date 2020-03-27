@@ -1,11 +1,7 @@
-type Test {
-
-}
-
 fn test(Int x) {
-    return x;
+    return x;   
 }
 
 fn main() {
-
+    
 }

@@ -89,22 +89,22 @@ $@"#include <iostream>
 
     public struct VarDecl
     {
-        public string Name;
+        public Token Id;
         public string CName;
         public TypeSpec TypeSpec;
         public bool Mutable;
 
-        public VarDecl(Block block, string name, TypeSpec typeSpec, bool mutable)
+        public VarDecl(Block block, Token id, TypeSpec typeSpec, bool mutable)
         {
-            if (block.FindVar(new VarExpr(block, name), throws: false) != null)
-                CName = "x" + block.Vars[name].CName;
+            if (block.FindVar(new VarExpr(block, id), throws: false) != null)
+                CName = "x" + block.Vars[id.Text].CName;
             else
-                CName = Compiler.Prefix + name;
+                CName = Compiler.Prefix + id.Text;
 
-            Name = name;
+            Id = id;
             TypeSpec = typeSpec;
             Mutable = mutable;
-            block.Vars[name] = this;
+            block.Vars[id.Text] = this;
         }
     }
 
@@ -179,8 +179,9 @@ $@"#include <iostream>
 
         public VarDecl? FindVar(VarExpr expr, bool throws)
         {
-            var matches = Vars.Where(x => x.Key == expr.Token.Text).ToList();
-            if (matches.Count == 0)
+            var matches = Vars.Where(x => x.Key == expr.Token.Text).ToArray();
+
+            if (matches.Length == 0)
             {
                 if (Parent == null)
                 {
@@ -199,8 +200,8 @@ $@"#include <iostream>
 
         public TypeDecl FindType(TypeSpec spec)
         {
-            var matches = TypeDecls.Where(x => x.Id.Text == spec.Token.Text).ToList();
-            if (matches.Count == 0)
+            var matches = TypeDecls.Where(x => x.Id.Text == spec.Token.Text).ToArray();
+            if (matches.Length == 0)
             {
                 if (Parent == null)
                     throw new CompileError(spec.Token,
@@ -214,8 +215,8 @@ $@"#include <iostream>
 
         public FnDecl FindFn(FnCall call)
         {
-            var matches = FindMatchingSignatures(call).ToList();
-            if (matches.Count == 0)
+            var matches = FindMatchingSignatures(call).ToArray();
+            if (matches.Length == 0)
             {
                 if (Parent == null)
                     throw new CompileError(call.Token,
@@ -228,7 +229,7 @@ $@"#include <iostream>
 
         public IEnumerable<FnDecl> FindMatchingSignatures(FnCall call)
         {
-            var matches = FnDecls.Where(x => x.Id.Text == call.Id.Text).ToList();
+            var matches = FnDecls.Where(x => x.Id.Text == call.Id.Text).ToArray();
             foreach (var fn in matches)
             {
                 // Check parameter counts.
@@ -333,6 +334,12 @@ $@"#include <iostream>
             ReturnType = returnType;
             Body = body;
             Body.ParentDecl = this;
+
+            // Give the body of this function variable declarations for the parameters.
+            foreach (var param in parameters)
+            {
+                new VarDecl(Body, param.Id, param.Type, mutable: false);
+            }
         }
 
         public override bool Equals(object? obj)
@@ -764,11 +771,6 @@ $@"#include <iostream>
             Value = value;
         }
 
-        public VarExpr(Block block, string name) : base(block)
-        {
-            Value = new Token(TokenId.Id, name, 0, 0);
-        }
-
         public override void Show()
         {
             Printer.Print(ToString());
@@ -869,7 +871,7 @@ $@"#include <iostream>
 
             // Declaration of a variable.
             var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
-            decl = new VarDecl(Block, name: Id.Text, typeSpec, mutable: false);
+            decl = new VarDecl(Block, Id, typeSpec, mutable: false);
             if (!Mutable)
                 stream.Write("const ");
             decl.Value.TypeSpec.Emit(stream);
