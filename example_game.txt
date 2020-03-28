@@ -1,0 +1,77 @@
+trait Transformable
+{
+    Transform Transform, get, set;
+}
+
+trait Drawable
+{
+    fn Draw(Context ctx&);
+}
+
+type Actor
+{
+    Int MaxHealth := ?;
+
+    Int Health := MaxHealth,
+    get, set 
+    {
+        Health = value unless (value < 0) then 0;
+        if (Health = 0) {
+            Die();
+        }
+    }
+
+    Rat CarryCapacity := 100?;
+
+    Set<Item> Items := new(), get;
+    Rat CurrentCarryWeight := 0, get;
+
+    virtual fn AddItem&(Item item!)
+    {
+        Items.Add(item);
+        CurrentCarryWeight += item.Weight;
+    }
+
+    virtual fn RemoveItem&(Item* item)
+    {
+        if (Items.Remove(item))
+            CurrentCarryWeight -= item.Weight;
+    }
+
+    bool Overburdened,
+    get
+    {
+        return CurrentCarryWeight > CarryCapacity;
+    }
+
+    optional fn Die() {}
+
+    impl Transformable 
+    {
+        Transform Transform := new(), get, set;
+    }
+
+    impl Drawable
+    {
+        virtual fn Draw(Context ctx&)
+        {
+            // do draw logic
+        }
+    }
+}
+
+type Player : Actor 
+{
+    impl fn Die()
+    {
+        System.PrintLn("Oh no, a player died!");
+    }
+}
+
+type Monster : Actor 
+{
+    impl fn Die()
+    {
+        System.PrintLn("Yay! A monster died!");
+    }
+}
