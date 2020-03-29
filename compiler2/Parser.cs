@@ -142,6 +142,23 @@ namespace compiler2
                         block!, ifToken, cond, body
                     ));
                 }
+                else if (t.Id == TokenId.Else)
+                {
+                    var elseToken = t;
+
+                    // Else statement.
+                    t = Next();
+
+                    Block body;
+                    if (t.Id == TokenId.Begin)
+                        body = ParseBlock(Next(), oneStatement: false);
+                    else
+                        body = ParseBlock(t, oneStatement: true);
+
+                    block!.Stmts.Add(new ast.ElseStmt(
+                        block!, elseToken, body
+                    ));
+                }
                 else
                     throw new ParseError(t, "Expected '}', assignment, or statement");
 

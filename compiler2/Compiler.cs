@@ -1050,4 +1050,38 @@ $@"#include <iostream>
             stream.WriteLine("}");
         }
     }
+
+    public class ElseStmt : Stmt
+    {
+        public Block Body;
+
+        public override Token Token { get; }
+
+        public ElseStmt(Block block, Token elseToken, Block body) : base(block)
+        {
+            Token = elseToken;
+            Body = body;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+            Printer.Promote();
+            Body.Show();
+            Printer.Demote();
+        }
+
+        public override string ToString()
+        {
+            return $"[Else]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            stream.WriteLine("else{");
+            Body.EmitDecl(stream);
+            Body.EmitImpl(stream);
+            stream.WriteLine("}");
+        }
+    }
 }

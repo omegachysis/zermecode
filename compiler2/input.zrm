@@ -4,10 +4,16 @@ type Bool
     #cpp_forward("#__Bool(bool val) { this->val = val; }");
 }
 
+type Int {}
+
 fn main()
 {
     if (False)
     {
         #cpp("std::cout << 1;");
+    }
+    else if (True)
+    {
+        #cpp("std::cout << 2;");
     }
 }
