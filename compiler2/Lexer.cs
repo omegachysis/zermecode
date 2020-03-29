@@ -248,18 +248,38 @@ namespace compiler2
             var t = builder.ToString();
             if (t.Length == 0) return null;
             builder.Clear();
-            if (t == "fn")
-                return new Token(TokenId.Fn, string.Empty, line, col - t.Length);
-            else if (t == "return")
-                return new Token(TokenId.Return, string.Empty, line, col - t.Length);
-            else if (t == "type")
-                return new Token(TokenId.Type, string.Empty, line, col - t.Length);
+
+            // Keywords:
+
+            Token? res = null;
+            if (IsKeyword(t, "fn", TokenId.Fn, out res)) return res;
+            else if (IsKeyword(t, "return", TokenId.Return, out res)) return res;
+            else if (IsKeyword(t, "type", TokenId.Type, out res)) return res;
+            else if (IsKeyword(t, "if", TokenId.If, out res)) return res;
+            else if (IsKeyword(t, "else", TokenId.Else, out res)) return res;
+
+            // Literals:
+
             else if (char.IsDigit(t[0]))
                 return new Token(TokenId.Num, t, line, col - t.Length);
             else if (t[0] == '"')
                 return new Token(TokenId.Str, t, line, col - t.Length);
             else
                 return new Token(TokenId.Id, t, line, col - t.Length);
+        }
+
+        private bool IsKeyword(string t, string keyword, TokenId id, out Token? token)
+        {
+            if (t == keyword)
+            {
+                token = new Token(id, string.Empty, line, col - t.Length);
+                return true;
+            }
+            else
+            {
+                token = null;
+                return false;
+            }
         }
     }
 }

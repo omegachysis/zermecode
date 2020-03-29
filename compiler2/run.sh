@@ -4,7 +4,7 @@ dotnet run
 echo
 echo "Compiling..."
 echo
-g++ bin/ir.cpp -o bin/result -lgmp -lgmpxx -lm
+g++ -Wall bin/ir.cpp -o bin/result -lgmp -lgmpxx -lm
 
 echo
 echo "Running..."

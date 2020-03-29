@@ -123,6 +123,10 @@ namespace compiler2
                 {
                     return blocks.Pop();
                 }
+                else if (t.Id == TokenId.If)
+                {
+                    throw new NotImplementedException();
+                }
                 else
                     throw new ParseError(t, "Expected '}', assignment, or statement");
             }

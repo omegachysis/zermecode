@@ -1,11 +1,7 @@
-type Int {
-
-}
-
-fn test(Int x) -> Int {
-    return;
-}
-
-fn main() {
-    
+fn main()
+{
+    if (True)
+    {
+        #cpp("std::cout << 1;");
+    }
 }

@@ -53,4 +53,6 @@ public enum TokenId
     Dot,
     Assign,
     Colon,
+    If,
+    Else,
 }

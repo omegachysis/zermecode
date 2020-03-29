@@ -53,13 +53,7 @@ namespace compiler2.ast
             {
                 Printer.Print("Program");
                 Printer.Print("");
-                if (Body != null)
-                {
-                    foreach (var decl in Body.FnDecls)
-                        decl.Show();
-                    foreach (var stmt in Body.Stmts)
-                        stmt.Show();
-                }
+                Body?.Show();
             }
             else
             {
@@ -108,7 +102,7 @@ $@"#include <iostream>
         }
     }
 
-    public class Block
+    public class Block : IShowable
     {
         public Token Token;
 
@@ -256,6 +250,14 @@ $@"#include <iostream>
                 }
             }
         }
+
+        public void Show()
+        {
+            foreach (var decl in FnDecls)
+                decl.Show();
+            foreach (var stmt in Stmts)
+                stmt.Show();
+        }
     }
 
     public abstract class Decl : IShowable
@@ -357,15 +359,9 @@ $@"#include <iostream>
         public override void Show()
         {
             Printer.Print(ToString());
-            if (Body != null)
-            {
-                Printer.Promote();
-                foreach (var decl in Body.FnDecls)
-                    decl.Show();
-                foreach (var stmt in Body.Stmts)
-                    stmt.Show();
-                Printer.Demote();
-            }
+            Printer.Promote();
+            Body?.Show();
+            Printer.Demote();
         }
 
         public override string ToString()
@@ -832,7 +828,7 @@ $@"#include <iostream>
             stream.Write(')');
         }
     }
-
+    
     public class Assn : Stmt
     {
         public readonly Token Id;
