@@ -48,6 +48,7 @@ public enum TokenId
     Eq,
     Op,
     Str,
+    Bool,
     Return,
     Type,
     Dot,

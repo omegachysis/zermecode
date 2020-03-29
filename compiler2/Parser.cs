@@ -23,7 +23,7 @@ namespace compiler2
                 if (t.Id != TokenId.Begin)
                     throw new InvalidOperationException();
 
-                ast.Body = ParseBlock();
+                ast.Body = ParseBlock(Next(), oneStatement: false);
 
                 t = Next();
                 if (t.Id != TokenId.Eof)
@@ -41,13 +41,11 @@ namespace compiler2
             return ast;
         }
 
-        private ast.Block ParseBlock()
+        private ast.Block ParseBlock(Token t, bool oneStatement)
         {
             blocks.Push(new ast.Block(tokens!.Current, block));
             while (true)
             {
-                var t = Next();
-
                 // Function declaration:
                 if (t.Id == TokenId.Fn)
                 {
@@ -119,16 +117,38 @@ namespace compiler2
                             block!, returnKeyword: t, value: expr));
                     }
                 }
-                else if (t.Id == TokenId.End)
+                else if (t.Id == TokenId.End && !oneStatement)
                 {
                     return blocks.Pop();
                 }
                 else if (t.Id == TokenId.If)
                 {
-                    throw new NotImplementedException();
+                    var ifToken = t;
+
+                    // If statement.
+                    t = Next();
+
+                    if (t.Id != TokenId.LParen)
+                        throw new ParseError(t, "Expected '('");
+                    var cond = ParseExpr(t, out var la);
+
+                    Block body;
+                    if (la.Id == TokenId.Begin)
+                        body = ParseBlock(Next(), oneStatement: false);
+                    else
+                        body = ParseBlock(la, oneStatement: true);
+
+                    block!.Stmts.Add(new ast.IfStmt(
+                        block!, ifToken, cond, body
+                    ));
                 }
                 else
                     throw new ParseError(t, "Expected '}', assignment, or statement");
+
+                if (oneStatement)
+                    return blocks.Pop();
+                else
+                    t = Next();
             }
         }
 
@@ -143,7 +163,8 @@ namespace compiler2
             if (t.Id != TokenId.Begin)
                 throw new ParseError(t, "Expected '{'");
 
-            return new ast.TypeDecl(block!, tId, ParseBlock());
+            return new ast.TypeDecl(block!, tId, 
+                ParseBlock(Next(), oneStatement: false));
         }
 
         private ast.FnDecl ParseFnDecl()
@@ -208,7 +229,8 @@ namespace compiler2
                 throw new ParseError(t, "Expected '{'");
 
             // Function block:
-            return new ast.FnDecl(block!, tId, parameters, returnType, body: ParseBlock());
+            return new ast.FnDecl(block!, tId, parameters, returnType, 
+                body: ParseBlock(Next(), oneStatement: false));
         }
 
         private ast.FnCall ParseFnCall(Token fnId)
@@ -357,6 +379,12 @@ namespace compiler2
                 
                 la = Next();
                 return expr;
+            }
+            else if (t.Id == TokenId.Bool)
+            {
+                // Boolean literal (true/false).
+                la = Next();
+                return new ast.BoolExpr(block!, t);
             }
             else
                 throw new ParseError(t, "Expected identifier or literal");

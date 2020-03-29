@@ -1,6 +1,12 @@
+type Bool
+{
+    #cpp_forward("bool val;");
+    #cpp_forward("#__Bool(bool val) { this->val = val; }");
+}
+
 fn main()
 {
-    if (True)
+    if (False)
     {
         #cpp("std::cout << 1;");
     }

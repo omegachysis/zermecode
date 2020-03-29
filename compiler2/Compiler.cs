@@ -136,6 +136,22 @@ $@"#include <iostream>
                 throw new CompileError(Stmts.First().Token,
                 $"Statements not allowed in the global block");
 
+            // Some metafunctions should be emitted within the type declaration 
+            // itself. Emit those now.
+            if (ParentDecl is TypeDecl)
+            {
+                foreach (var stmt in Stmts)
+                {
+                    if (stmt is ExprStmt expr)
+                    {
+                        if (expr.Expr is FnCall call)
+                        {
+                            Metafunctions.Emit(stream, call, forward: true);
+                        }
+                    }
+                }
+            }
+
             var typeDeclIds = new HashSet<string>();
             foreach (var decl in TypeDecls)
             {
@@ -171,6 +187,14 @@ $@"#include <iostream>
                 stmt.Emit(stream);
         }
 
+        public Block Global()
+        {
+            if (Parent == null)
+                return this;
+            else
+                return Parent.Global();
+        }
+
         public VarDecl? FindVar(VarExpr expr, bool throws)
         {
             var matches = Vars.Where(x => x.Key == expr.Token.Text).ToArray();
@@ -190,6 +214,11 @@ $@"#include <iostream>
             }
             else
                 return matches.Single().Value;
+        }
+
+        public TypeDecl FindType(string id)
+        {
+            return FindType(new SimpleTypeSpec(new Token(TokenId.Id, id, 0, 0)));
         }
 
         public TypeDecl FindType(TypeSpec spec)
@@ -607,10 +636,9 @@ $@"#include <iostream>
 
         public override void Emit(StreamWriter stream)
         {
-            // Write function identifier:
             if (Id.Text.StartsWith('#'))
             {
-                Metafunctions.Emit(stream, this);
+                Metafunctions.Emit(stream, this, forward: false);
             }
             else
             {
@@ -703,7 +731,7 @@ $@"#include <iostream>
 
         public override string ToString()
         {
-            return $"[N:{LitType} {Value.Text}]";
+            return $"[Num:{LitType} {Value.Text}]";
         }
 
         public override void Emit(StreamWriter stream)
@@ -777,7 +805,7 @@ $@"#include <iostream>
 
         public override string ToString()
         {
-            return $"[V:{Value.Text}]";
+            return $"[Var:{Value.Text}]";
         }
 
         public override void Emit(StreamWriter stream)
@@ -815,7 +843,7 @@ $@"#include <iostream>
 
         public override string ToString()
         {
-            return $"[S:{Value.Text}]";
+            return $"[Str:{Value.Text}]";
         }
 
         public override void Emit(StreamWriter stream)
@@ -825,6 +853,49 @@ $@"#include <iostream>
             stream.Write(Compiler.Prefix);
             stream.Write("String(");
             stream.Write(Value.Text);
+            stream.Write(')');
+        }
+    }
+
+    public class BoolExpr : Expr
+    {
+        public Token Value;
+
+        public override Token Token => Value;
+
+        public override TypeDecl TypeDecl
+        {
+            get
+            {
+                var literal = Value;
+                literal.Text = "Bool";
+                return Block.FindType(new SimpleTypeSpec(literal));
+            }
+        }
+
+        public BoolExpr(Block block, Token value) : base(block)
+        {
+            Value = value;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[Bool:{Value.Text}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            // C++ boolean wrapper:
+            // __ZERM__Bool(true)
+            // __ZERM__Bool(false)
+            stream.Write(Compiler.Prefix);
+            stream.Write("Bool(");
+            stream.Write(Value.Text.ToLowerInvariant());
             stream.Write(')');
         }
     }
@@ -932,6 +1003,51 @@ $@"#include <iostream>
             stream.Write("return ");
             Value?.Emit(stream);
             stream.WriteLine(';');
+        }
+    }
+
+    public class IfStmt : Stmt
+    {
+        public Expr Condition;
+        public Block Body;
+
+        public override Token Token { get; }
+
+        public IfStmt(Block block, Token ifToken, Expr cond, Block body) : base(block)
+        {
+            Token = ifToken;
+            Condition = cond;
+            Body = body;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+            Printer.Promote();
+            Body.Show();
+            Printer.Demote();
+        }
+
+        public override string ToString()
+        {
+            return $"[If:{Condition}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            if (Condition.TypeDecl != Block.Global().FindType("Bool"))
+                throw new CompileError(Condition.Token, 
+                    "If conditional must be a boolean expression");
+
+            stream.Write("if(");
+            Condition.Emit(stream);
+            stream.Write(".val");
+            stream.WriteLine("){");
+
+            Body.EmitDecl(stream);
+            Body.EmitImpl(stream);
+
+            stream.WriteLine("}");
         }
     }
 }

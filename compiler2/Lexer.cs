@@ -260,10 +260,21 @@ namespace compiler2
 
             // Literals:
 
+            // Boolean (true/false):
+            else if (t == "True")
+                return new Token(TokenId.Bool, t, line, col - t.Length);
+            else if (t == "False")
+                return new Token(TokenId.Bool, t, line, col - t.Length);
+
+            // Number:
             else if (char.IsDigit(t[0]))
                 return new Token(TokenId.Num, t, line, col - t.Length);
+                
+            // String:
             else if (t[0] == '"')
                 return new Token(TokenId.Str, t, line, col - t.Length);
+
+            // Identifier:
             else
                 return new Token(TokenId.Id, t, line, col - t.Length);
         }
