@@ -1,43 +1,66 @@
 type Bool
 {
     #cpp_forward("bool val;");
-    #cpp_forward("#__Bool(bool val) { this->val = val; }");
+    #cpp_forward("#__Bool(bool val) { 
+        this->val = val; 
+    }");
 }
 
 type String 
 {
     #cpp_forward("const char* raw;");
-    #cpp_forward("#__String(const std::string& raw) { this->raw = raw.c_str(); }");
+    #cpp_forward("#__String(const std::string& raw) { 
+        this->raw = raw.c_str(); 
+    }");
 }
 
 type Float32 
 {
     #cpp_forward("float raw;");
-    #cpp_forward("#__Float32(const float& raw) { this->raw = raw; }");
+    #cpp_forward("#__Float32(const float& raw) { 
+        this->raw = raw; 
+    }");
 }
 
 type Float64 
 {
     #cpp_forward("double raw;");
-    #cpp_forward("#__Float64(const double& raw) { this->raw = raw; }");
+    #cpp_forward("#__Float64(const double& raw) { 
+        this->raw = raw;
+    }");
 }
 
 type Rat 
 {
     #cpp_forward("mpq_t raw;");
-    #cpp_forward("#__Rat() { mpq_init(raw); }");
-    #cpp_forward("#__Rat(const std::string& from, const int& base) 
-        { mpq_init(raw); mpq_set_str(raw, from.c_str(), base); mpq_canonicalize(raw); }");
-    #cpp_forward("~#__Rat() { mpq_clear(raw); }");
+    #cpp_forward("#__Rat() { 
+        mpq_init(raw); 
+    }");
+    #cpp_forward("#__Rat(const std::string& from, const int& base) { 
+        mpq_init(raw); 
+        mpq_set_str(raw, from.c_str(), base); 
+        mpq_canonicalize(raw);
+    }");
+    #cpp_forward("~#__Rat() {
+        mpq_clear(raw); 
+    }");
 }
 
 type Int 
 {
     #cpp_forward("mpz_t raw;");
-    #cpp_forward("#__Int() { mpz_init(raw); }");
-    #cpp_forward("#__Int(const std::string& from, const int& base) 
-        { mpz_init_set_str(raw, from.c_str(), base); }");
-    #cpp_forward("~#__Int() { mpz_clear(raw); }");
+    #cpp_forward("#__Int() { 
+        mpz_init(raw); 
+    }");
+    #cpp_forward("#__Int(const std::string& from, const int& base) { 
+        mpz_init_set_str(raw, from.c_str(), base); 
+    }");
+    #cpp_forward("void operator=(const #__Int& other) {
+        mpz_set(raw, other.raw);
+    }");
+    #cpp_forward("~#__Int() { 
+        mpz_clear(raw); 
+    }");
 }
 
 fn op+(Int a, Int b) -> Int 

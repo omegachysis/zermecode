@@ -1,16 +1,26 @@
 type Int 
 {
     #cpp_forward("mpz_t raw;");
-    #cpp_forward("#__Int() { mpz_init(raw); }");
-    #cpp_forward("#__Int(const std::string& from, const int& base) 
-        { mpz_init_set_str(raw, from.c_str(), base); }");
-    #cpp_forward("~#__Int() { mpz_clear(raw); }");
+    #cpp_forward("#__Int() { 
+        mpz_init(raw); 
+    }");
+    #cpp_forward("#__Int(const std::string& from, const int& base) { 
+        mpz_init_set_str(raw, from.c_str(), base); 
+    }");
+    #cpp_forward("void operator=(const #__Int& other) {
+        mpz_set(raw, other.raw);
+    }");
+    #cpp_forward("~#__Int() { 
+        mpz_clear(raw); 
+    }");
 }
 
 fn print(Int x) 
 {
     #cpp("std::cout << #__x.raw;");
 }
+
+
 
 fn main() 
 {

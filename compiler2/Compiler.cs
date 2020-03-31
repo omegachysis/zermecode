@@ -935,12 +935,6 @@ $@"#include <iostream>
             if (!decl.Value.Mutable)
                 throw new CompileError(Id, "Reassignment of immutable variable");
 
-            // We need to call the destructor on the old value first.
-            stream.Write(decl.Value.CName);
-            stream.Write(".~");
-            decl.Value.TypeSpec.Emit(stream);
-            stream.WriteLine("();");
-
             // Reassign the value.
             stream.Write(decl.Value.CName);
             stream.Write('=');
