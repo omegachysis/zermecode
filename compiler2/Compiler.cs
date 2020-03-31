@@ -930,13 +930,22 @@ $@"#include <iostream>
             );
 
             if (!decl.HasValue)
-                throw new CompileError(Token, "Reassignment of undeclared variable");
+                throw new CompileError(Id, "Reassignment of undeclared variable");
 
-            // TODO: We need to call the destructor on the old 
-            // value first.
-            throw new NotImplementedException();
+            if (!decl.Value.Mutable)
+                throw new CompileError(Id, "Reassignment of immutable variable");
 
-            // TODO: reassign variable value.
+            // We need to call the destructor on the old value first.
+            stream.Write(decl.Value.CName);
+            stream.Write(".~");
+            decl.Value.TypeSpec.Emit(stream);
+            stream.WriteLine("();");
+
+            // Reassign the value.
+            stream.Write(decl.Value.CName);
+            stream.Write('=');
+            Value.Emit(stream);
+            stream.WriteLine(';');
         }
     }
 
@@ -970,7 +979,7 @@ $@"#include <iostream>
         {
             // Declaration of a variable.
             var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
-            var decl = new VarDecl(Block, Id, typeSpec, mutable: false);
+            var decl = new VarDecl(Block, Id, typeSpec, Mutable);
             if (!Mutable)
                 stream.Write("const ");
             decl.TypeSpec.Emit(stream);

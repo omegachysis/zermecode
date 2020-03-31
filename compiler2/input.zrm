@@ -14,6 +14,8 @@ fn print(Int x)
 
 fn main() 
 {
-    let x = 1;
-    print(x);
+    let y := 1;
+    print(y);
+    y := 2;
+    print(y);
 }
