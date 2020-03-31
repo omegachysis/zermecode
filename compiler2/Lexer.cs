@@ -61,6 +61,10 @@ namespace compiler2
                 line += 1;
                 col = 0;
             }
+            else if (c == '\r')
+            {
+                col = 0;
+            }
             else
                 col += 1;
 
@@ -75,22 +79,9 @@ namespace compiler2
                 var c = Next();
             Backtrack:
 
-                if (c == '\t')
+                if (c == '\t' || c == '\n' || c == ' ')
                 {
                     yield return Finish();
-                    col += 3;
-                }
-                else if (c == '\n')
-                {
-                    yield return Finish();
-                }
-                else if (c == ' ')
-                {
-                    yield return Finish();
-                }
-                else if (c == '\r') 
-                { 
-                    col -= 1; 
                 }
                 else if (c == '(')
                 {
