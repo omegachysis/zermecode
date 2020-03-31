@@ -89,19 +89,43 @@ namespace compiler2
                         var stmt = new ast.ExprStmt(block!, fnCall);
                         block!.Stmts.Add(stmt);
                     }
-                    else if (t1.Id == TokenId.Eq || t1.Id == TokenId.Assign)
+                    else if (t1.Id == TokenId.Assign)
                     {
-                        // Assignment (mutable or immutable).
+                        // Reassignment.
                         var rhs = ParseExpr(Next(), out var la);
                         if (la.Id != TokenId.Semi)
                             throw new ParseError(la, "Expected ';'");
 
-                        var assn = new ast.Assn(block!, t, rhs,
-                            mutable: t1.Id == TokenId.Assign);
+                        var assn = new ast.Assn(block!, t, rhs);
                         block!.Stmts.Add(assn);
                     }
                     else
-                        throw new ParseError(t, "Expected '=' or ':='");
+                        throw new ParseError(t, "Expected ':='");
+                }
+                else if (t.Id == TokenId.Let)
+                {
+                    // Declaration (let statement).
+                    var tId = Next();
+                    
+                    if (tId.Id != TokenId.Id)
+                        throw new ParseError(tId, "Expected identifier");
+
+                    // Check mutable (:=) or immutable (=).
+                    var tOp = Next();
+                    var mutable = false;
+                    if (tOp.Id == TokenId.Assign)
+                        mutable = true;
+                    else if (tOp.Id == TokenId.Eq)
+                        mutable = false;
+                    else
+                        throw new ParseError(tOp, "Expected '=' or ':='");
+
+                    var rhs = ParseExpr(Next(), out var la);
+                    if (la.Id != TokenId.Semi)
+                        throw new ParseError(la, "Expected ';'");
+
+                    var let = new ast.LetStmt(block!, tId, rhs, mutable);
+                    block!.Stmts.Add(let);
                 }
                 else if (t.Id == TokenId.Return)
                 {

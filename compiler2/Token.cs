@@ -56,4 +56,5 @@ public enum TokenId
     Colon,
     If,
     Else,
+    Let,
 }

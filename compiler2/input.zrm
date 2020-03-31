@@ -1,19 +1,19 @@
-type Bool
+type Int 
 {
-    #cpp_forward("bool val;");
-    #cpp_forward("#__Bool(bool val) { this->val = val; }");
+    #cpp_forward("mpz_t raw;");
+    #cpp_forward("#__Int() { mpz_init(raw); }");
+    #cpp_forward("#__Int(const std::string& from, const int& base) 
+        { mpz_init_set_str(raw, from.c_str(), base); }");
+    #cpp_forward("~#__Int() { mpz_clear(raw); }");
 }
 
-type Int {}
-
-fn main()
+fn print(Int x) 
 {
-    if (False)
-    {
-        #cpp("std::cout << 1;");
-    }
-    else if (True)
-    {
-        #cpp("std::cout << 2;");
-    }
+    #cpp("std::cout << #__x.raw;");
+}
+
+fn main() 
+{
+    let x = 1;
+    print(x);
 }

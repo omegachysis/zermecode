@@ -98,7 +98,6 @@ $@"#include <iostream>
             Id = id;
             TypeSpec = typeSpec;
             Mutable = mutable;
-            block.Vars[id.Text] = this;
         }
     }
 
@@ -369,7 +368,8 @@ $@"#include <iostream>
             // Give the body of this function variable declarations for the parameters.
             foreach (var param in parameters)
             {
-                new VarDecl(Body, param.Id, param.Type, mutable: false);
+                var decl = new VarDecl(Body, param.Id, param.Type, mutable: false);
+                Body.Vars.Add(decl.Id.Text, decl);
             }
         }
 
@@ -904,11 +904,51 @@ $@"#include <iostream>
     {
         public readonly Token Id;
         public readonly Expr Value;
+
+        public override Token Token => Id;
+
+        public Assn(Block block, Token id, Expr value) : base(block)
+        {
+            Id = id;
+            Value = value;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[Assn:{Id.Text} := {Value}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            var decl = Block.FindVar(
+                new VarExpr(Block, Id), throws: false
+            );
+
+            if (!decl.HasValue)
+                throw new CompileError(Token, "Reassignment of undeclared variable");
+
+            // TODO: We need to call the destructor on the old 
+            // value first.
+            throw new NotImplementedException();
+
+            // TODO: reassign variable value.
+        }
+    }
+
+    public class LetStmt : Stmt
+    {
+        public readonly Token Id;
+        public readonly Expr Value;
         public readonly bool Mutable;
 
         public override Token Token => Id;
 
-        public Assn(Block block, Token id, Expr value, bool mutable) : base(block)
+        public LetStmt(Block block, Token id, Expr value, bool mutable) : base(block)
         {
             Id = id;
             Value = value;
@@ -923,33 +963,24 @@ $@"#include <iostream>
         public override string ToString()
         {
             var op = Mutable ? ":=" : "=";
-            return $"[A:{Id.Text} {op} {Value}]";
+            return $"[Let:{Id.Text} {op} {Value}]";
         }
 
         public override void Emit(StreamWriter stream)
         {
-            var decl = Block.FindVar(
-                new VarExpr(Block, Id), throws: false
-            );
-
-            if (decl.HasValue)
-            {
-                // We need to call the destructor on the old 
-                // value first.
-                throw new NotImplementedException();
-            }
-
             // Declaration of a variable.
             var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
-            decl = new VarDecl(Block, Id, typeSpec, mutable: false);
+            var decl = new VarDecl(Block, Id, typeSpec, mutable: false);
             if (!Mutable)
                 stream.Write("const ");
-            decl.Value.TypeSpec.Emit(stream);
+            decl.TypeSpec.Emit(stream);
             stream.Write(' ');
-            stream.Write(decl.Value.CName);
+            stream.Write(decl.CName);
             stream.Write('=');
             Value.Emit(stream);
             stream.WriteLine(';');
+
+            Block.Vars[decl.Id.Text] = decl;
         }
     }
 
