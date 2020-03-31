@@ -79,7 +79,7 @@ namespace compiler2
                 var c = Next();
             Backtrack:
 
-                if (c == '\t' || c == '\n' || c == ' ')
+                if (c == '\t' || c == '\n' || c == ' ' || c == '\r')
                 {
                     yield return Finish();
                 }

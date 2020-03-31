@@ -451,7 +451,7 @@ namespace compiler2
     public class ParseError : Exception 
     {
         public ParseError(Token t, string? message = null) : base(
-            $"Line {t.Line}, Col {t.Col}:\n{message}") { }
+            $"Line {t.Line}, Col {t.Col}, Token {t}:\n{message}") { }
     }
 }
 
