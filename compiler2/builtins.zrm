@@ -8,58 +8,61 @@ type Bool
 
 type String 
 {
-    #cpp_forward("const char* raw;");
-    #cpp_forward("#__String(const std::string& raw) { 
-        this->raw = raw.c_str(); 
+    #cpp_forward("const char* val;");
+    #cpp_forward("#__String(const std::string& val) { 
+        this->val = val.c_str(); 
     }");
 }
 
 type Float32 
 {
-    #cpp_forward("float raw;");
-    #cpp_forward("#__Float32(const float& raw) { 
-        this->raw = raw; 
+    #cpp_forward("float val;");
+    #cpp_forward("#__Float32(const float& val) { 
+        this->val = val; 
     }");
 }
 
 type Float64 
 {
-    #cpp_forward("double raw;");
-    #cpp_forward("#__Float64(const double& raw) { 
-        this->raw = raw;
+    #cpp_forward("double val;");
+    #cpp_forward("#__Float64(const double& val) { 
+        this->val = val;
     }");
 }
 
 type Rat 
 {
-    #cpp_forward("mpq_t raw;");
+    #cpp_forward("mpq_t val;");
     #cpp_forward("#__Rat() { 
-        mpq_init(raw); 
+        mpq_init(val); 
     }");
     #cpp_forward("#__Rat(const std::string& from, const int& base) { 
-        mpq_init(raw); 
-        mpq_set_str(raw, from.c_str(), base); 
-        mpq_canonicalize(raw);
+        mpq_init(val); 
+        mpq_set_str(val, from.c_str(), base); 
+        mpq_canonicalize(val);
+    }");
+    #cpp_forward("void operator=(const #__Rat& other) {
+        mpq_set(val, other.val);
     }");
     #cpp_forward("~#__Rat() {
-        mpq_clear(raw); 
+        mpq_clear(val); 
     }");
 }
 
 type Int 
 {
-    #cpp_forward("mpz_t raw;");
+    #cpp_forward("mpz_t val;");
     #cpp_forward("#__Int() { 
-        mpz_init(raw); 
+        mpz_init(val); 
     }");
     #cpp_forward("#__Int(const std::string& from, const int& base) { 
-        mpz_init_set_str(raw, from.c_str(), base); 
+        mpz_init_set_str(val, from.c_str(), base); 
     }");
     #cpp_forward("void operator=(const #__Int& other) {
-        mpz_set(raw, other.raw);
+        mpz_set(val, other.val);
     }");
     #cpp_forward("~#__Int() { 
-        mpz_clear(raw); 
+        mpz_clear(val); 
     }");
 }
 
@@ -67,7 +70,7 @@ fn op+(Int a, Int b) -> Int
 {
     #cpp("
     #__Int res;
-    mpz_add(res.raw, #__a.raw, #__b.raw);
+    mpz_add(res.val, #__a.val, #__b.val);
     return res;");
 }
 
@@ -75,7 +78,7 @@ fn op-(Int a, Int b) -> Int
 {
     #cpp("
     #__Int res;
-    mpz_sub(res.raw, #__a.raw, #__b.raw);
+    mpz_sub(res.val, #__a.val, #__b.val);
     return res;");
 }
 
@@ -83,7 +86,7 @@ fn op-(Int a) -> Int
 {
     #cpp("
     #__Int res;
-    mpz_neg(res.raw, #__a.raw);
+    mpz_neg(res.val, #__a.val);
     return res;");
 }
 
@@ -91,7 +94,7 @@ fn op*(Int a, Int b) -> Int
 {
     #cpp("
     #__Int res;
-    mpz_mul(res.raw, #__a.raw, #__b.raw);
+    mpz_mul(res.val, #__a.val, #__b.val);
     return res;");
 }
 
@@ -99,38 +102,38 @@ fn op^(Int a, Int b) -> Int
 {
     #cpp("
     #__Int res;
-    mpz_pow_ui(res.raw, #__a.raw, mpz_get_ui(#__b.raw));
+    mpz_pow_ui(res.val, #__a.val, mpz_get_ui(#__b.val));
     return res;");
 }
 
 fn op+(Float32 a, Float32 b) -> Float32 
 {
-    #cpp("return #__Float32(#__a.raw + #__b.raw);");
+    #cpp("return #__Float32(#__a.val + #__b.val);");
 }
 
 fn op-(Float32 a) -> Float32 
 {
-    #cpp("return #__Float32(-#__a.raw);");
+    #cpp("return #__Float32(-#__a.val);");
 }
 
 fn op-(Float32 a, Float32 b) -> Float32 
 {
-    #cpp("return #__Float32(#__a.raw - #__b.raw);");
+    #cpp("return #__Float32(#__a.val - #__b.val);");
 }
 
 fn op*(Float32 a, Float32 b) -> Float32 
 {
-    #cpp("return #__Float32(#__a.raw * #__b.raw);");
+    #cpp("return #__Float32(#__a.val * #__b.val);");
 }
 
 fn op^(Float32 a, Float32 b) -> Float32 
 {
-    #cpp("return #__Float32(std::pow(#__a.raw, #__b.raw));");
+    #cpp("return #__Float32(std::pow(#__a.val, #__b.val));");
 }
 
 fn print(String str) 
 {
-    #cpp("std::cout << #__str.raw;");
+    #cpp("std::cout << #__str.val;");
 }
 
 fn println() 
@@ -140,20 +143,20 @@ fn println()
 
 fn println(String str) 
 {
-    #cpp("std::cout << #__str.raw << std::endl;");
+    #cpp("std::cout << #__str.val << std::endl;");
 }
 
 fn print(Int x) 
 {
-    #cpp("std::cout << #__x.raw;");
+    #cpp("std::cout << #__x.val;");
 }
 
 fn print(Float32 x) 
 {
-    #cpp("std::cout << #__x.raw;");
+    #cpp("std::cout << #__x.val;");
 }
 
 fn print(Rat x) 
 {
-    #cpp("std::cout << #__x.raw;");
+    #cpp("std::cout << #__x.val;");
 }
