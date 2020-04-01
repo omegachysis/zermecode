@@ -177,6 +177,11 @@ namespace compiler2
                     yield return Finish();
                     yield return new Token(TokenId.Eq, line, col);
                 }
+                else if (c == '&')
+                {
+                    yield return Finish();
+                    yield return new Token(TokenId.Amp, line, col - 1);
+                }
                 else if (c == '*' || c == '+' || c == '-' || c == '^')
                 {
                     yield return Finish();

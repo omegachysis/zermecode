@@ -239,13 +239,34 @@ namespace compiler2
                     break;
 
                 var typeSpec = ParseTypeSpec(t);
-                var argId = Next();
+
+                // Look for a mutable borrow or a take indicator:
+                var passBy = Param.PassBy.ImmutableBorrow;
+                var postMod = Next();
+                
+                Token argId;
+                // If the next symbol is an ID, this is an immutable borrow:
+                if (postMod.Id != TokenId.Id)
+                {
+                    if (postMod.Id == TokenId.Amp)
+                    {
+                        // Mutable borrow:
+                        passBy = Param.PassBy.MutableBorrow;
+                    }
+                    else
+                        throw new ParseError(postMod, "Expected identiifer or '&'");
+
+                    argId = Next();
+                }
+                else
+                    argId = postMod;
+
                 if (argId.Id != TokenId.Id)
                     throw new ParseError(argId, "Expected identifier");
                 if (!argIds.Add(argId.Text))
                     throw new ParseError(argId, "Argument already defined");
 
-                parameters.Add(new compiler2.ast.Param(typeSpec, argId));
+                parameters.Add(new compiler2.ast.Param(block!, typeSpec, passBy, argId));
 
                 t = Next();
                 if (t.Id == TokenId.RParen)

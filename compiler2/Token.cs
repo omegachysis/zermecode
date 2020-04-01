@@ -57,4 +57,5 @@ public enum TokenId
     If,
     Else,
     Let,
+    Amp,
 }

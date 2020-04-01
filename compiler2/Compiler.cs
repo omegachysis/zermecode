@@ -83,10 +83,19 @@ $@"#include <iostream>
 
     public struct VarDecl
     {
-        public Token Id;
-        public string CName;
-        public TypeSpec TypeSpec;
-        public bool Mutable;
+        public readonly Block Block;
+        public readonly Token Id;
+        public readonly string CName;
+        public readonly TypeSpec TypeSpec;
+        public readonly bool Mutable;
+
+        public TypeDecl TypeDecl
+        {
+            get
+            {
+                return Block.FindType(TypeSpec);
+            }
+        }
 
         public VarDecl(Block block, Token id, TypeSpec typeSpec, bool mutable)
         {
@@ -95,6 +104,7 @@ $@"#include <iostream>
             else
                 CName = Compiler.Prefix + id.Text;
 
+            Block = block;
             Id = id;
             TypeSpec = typeSpec;
             Mutable = mutable;
@@ -265,8 +275,7 @@ $@"#include <iostream>
                         var param = fn.Params[i];
                         var arg = call.Args[i];
 
-                        var paramType = FindType(param.Type);
-                        if (paramType != arg.TypeDecl)
+                        if (param.TypeDecl != arg.TypeDecl)
                         {
                             all = false;
                             break;
@@ -348,6 +357,12 @@ $@"#include <iostream>
         {
             Body?.EmitImpl(stream);
         }
+
+        public void EmitSpec(StreamWriter stream)
+        {
+            stream.Write(Compiler.Prefix);
+            stream.Write(Id.Text);
+        }
     }
 
     public class FnDecl : Decl
@@ -368,8 +383,12 @@ $@"#include <iostream>
             // Give the body of this function variable declarations for the parameters.
             foreach (var param in parameters)
             {
-                var decl = new VarDecl(Body, param.Id, param.Type, mutable: false);
-                Body.Vars.Add(decl.Id.Text, decl);
+                // Verify the type for each parameter is defined now:
+                Block.FindType(param.TypeSpec);
+
+                var varDecl = new VarDecl(Body, param.Id, param.TypeSpec, 
+                    mutable: param.PassByType == Param.PassBy.MutableBorrow);
+                Body.Vars.Add(varDecl.Id.Text, varDecl);
             }
         }
 
@@ -377,7 +396,8 @@ $@"#include <iostream>
         {
             return obj is FnDecl decl &&
                 Id.Text == decl.Id.Text && ReturnType == decl.ReturnType && 
-                Params.Select(x => x.Type).SequenceEqual(decl.Params.Select(x => x.Type));
+                Params.Select(x => x.TypeDecl).SequenceEqual(
+                    decl.Params.Select(x => x.TypeDecl));
         }
 
         public override int GetHashCode()
@@ -425,9 +445,6 @@ $@"#include <iostream>
 
             foreach (var param in Params.Take(Params.Count - 1))
             {
-                // Check to make sure there is a matching type for the parameter.
-                Block.FindType(param.Type);
-
                 param.Emit(stream);
                 stream.Write(',');
             }
@@ -464,7 +481,7 @@ $@"#include <iostream>
 
     public class SimpleTypeSpec : TypeSpec
     {
-        public Token Id;
+        public readonly Token Id;
 
         public override Token Token => Id;
 
@@ -504,12 +521,31 @@ $@"#include <iostream>
 
     public class Param : IShowable
     {
-        public TypeSpec Type;
-        public Token Id;
+        public readonly Block Block;
+        public readonly TypeSpec TypeSpec;
+        public readonly PassBy PassByType;
+        public readonly Token Id;
 
-        public Param(TypeSpec type, Token id)
+        public enum PassBy
         {
-            Type = type;
+            ImmutableBorrow,
+            MutableBorrow,
+            DynamicTake,
+        }
+
+        public TypeDecl TypeDecl
+        {
+            get
+            {
+                return Block.FindType(TypeSpec);
+            }
+        }
+
+        public Param(Block block, TypeSpec typeSpec, PassBy passBy, Token id)
+        {
+            Block = block;
+            TypeSpec = typeSpec;
+            PassByType = passBy;
             Id = id;
         }
 
@@ -520,13 +556,14 @@ $@"#include <iostream>
 
         public override string ToString()
         {
-            return $"[P:{Type} {Id.Text}]";
+            return $"[P:{PassByType} {TypeSpec} {Id.Text}]";
         }
 
         public void Emit(StreamWriter stream)
         {
-            stream.Write("const ");
-            Type.Emit(stream);
+            if (PassByType == PassBy.ImmutableBorrow)
+                stream.Write("const ");
+            TypeSpec.Emit(stream);
             stream.Write("& ");
             stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
@@ -535,7 +572,7 @@ $@"#include <iostream>
 
     public abstract class Stmt : IShowable
     {
-        public Block Block;
+        public readonly Block Block;
 
         public Stmt(Block block)
         {
@@ -551,7 +588,7 @@ $@"#include <iostream>
 
     public class ExprStmt : Stmt
     {
-        public Expr Expr;
+        public readonly Expr Expr;
 
         public override Token Token => Expr.Token;
 
@@ -579,7 +616,7 @@ $@"#include <iostream>
 
     public abstract class Expr : IShowable
     {
-        public Block Block;
+        public readonly Block Block;
 
         public Expr(Block block)
         {
@@ -597,7 +634,7 @@ $@"#include <iostream>
 
     public class FnCall : Expr
     {
-        public Token Id;
+        public readonly Token Id;
         public List<Expr> Args = new List<ast.Expr>();
 
         public override Token Token => Id;
@@ -789,7 +826,7 @@ $@"#include <iostream>
             get
             {
                 var varDecl = Block.FindVar(this, throws: true)!.Value;
-                return Block.FindType(varDecl.TypeSpec);
+                return varDecl.TypeDecl;
             }
         }
 

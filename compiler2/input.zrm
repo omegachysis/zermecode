@@ -161,13 +161,16 @@ fn print(Rat x)
     #cpp("std::cout << #__x.val;");
 }
 
+fn test(Int& a)
+{
+    a := 2;
+}
+
 fn main() 
 {
-    let x := 0.1;
+    let x := 1;
     print(x);
     println();
-
-    x := 0.2;
+    test(x);
     print(x);
-    println();
 }
