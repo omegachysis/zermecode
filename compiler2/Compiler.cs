@@ -87,7 +87,7 @@ $@"#include <iostream>
         public readonly Token Id;
         public readonly string CName;
         public readonly TypeSpec TypeSpec;
-        public readonly VarAccessType AccessType;
+        public readonly VarAccess AccessType;
 
         public TypeDecl TypeDecl
         {
@@ -101,10 +101,10 @@ $@"#include <iostream>
         {
             get
             {
-                return AccessType == VarAccessType.MutableBorrow || 
-                    AccessType == VarAccessType.MutableLocal || 
-                    AccessType == VarAccessType.DynamicLocal ||
-                    AccessType == VarAccessType.DynamicTake;
+                return AccessType == VarAccess.MutableBorrow || 
+                    AccessType == VarAccess.MutableLocal || 
+                    AccessType == VarAccess.DynamicLocal ||
+                    AccessType == VarAccess.DynamicTake;
             }
         }
 
@@ -112,14 +112,14 @@ $@"#include <iostream>
         {
             get
             {
-                return AccessType == VarAccessType.DynamicLocal || 
-                    AccessType == VarAccessType.DynamicTake || 
-                    AccessType == VarAccessType.ImmutableLocal || 
-                    AccessType == VarAccessType.MutableLocal;
+                return AccessType == VarAccess.DynamicLocal || 
+                    AccessType == VarAccess.DynamicTake || 
+                    AccessType == VarAccess.ImmutableLocal || 
+                    AccessType == VarAccess.MutableLocal;
             }
         }
 
-        public VarDecl(Block block, Token id, TypeSpec typeSpec, VarAccessType accessType)
+        public VarDecl(Block block, Token id, TypeSpec typeSpec, VarAccess accessType)
         {
             if (block.FindVar(new VarExpr(block, id), throws: false) != null)
                 CName = "x" + block.Vars[id.Text].CName;
@@ -408,7 +408,23 @@ $@"#include <iostream>
                 // Verify the type for each parameter is defined now:
                 Block.FindType(param.TypeSpec);
 
-                var varDecl = new VarDecl(Body, param.Id, param.TypeSpec, param.PassedBy);
+                VarAccess varAccess;
+                switch (param.PassedBy)
+                {
+                    case PassedBy.ImmutableBorrow:
+                        varAccess = VarAccess.ImmutableBorrow;
+                        break;
+                    case PassedBy.MutableBorrow:
+                        varAccess = VarAccess.MutableBorrow;
+                        break;
+                    case PassedBy.DynamicTake:
+                        varAccess = VarAccess.DynamicTake;
+                        break;
+                    default:
+                        throw new NotImplementedException();
+                }
+
+                var varDecl = new VarDecl(Body, param.Id, param.TypeSpec, varAccess);
                 Body.Vars.Add(varDecl.Id.Text, varDecl);
             }
         }
@@ -544,7 +560,7 @@ $@"#include <iostream>
     {
         public readonly Block Block;
         public readonly TypeSpec TypeSpec;
-        public readonly VarAccessType PassedBy;
+        public readonly PassedBy PassedBy;
         public readonly Token Id;
 
         public TypeDecl TypeDecl
@@ -555,7 +571,7 @@ $@"#include <iostream>
             }
         }
 
-        public Param(Block block, TypeSpec typeSpec, VarAccessType passedBy, Token id)
+        public Param(Block block, TypeSpec typeSpec, PassedBy passedBy, Token id)
         {
             Block = block;
             TypeSpec = typeSpec;
@@ -575,12 +591,27 @@ $@"#include <iostream>
 
         public void Emit(StreamWriter stream)
         {
-            if (PassedBy == VarAccessType.ImmutableBorrow)
+            if (PassedBy == PassedBy.ImmutableBorrow)
                 stream.Write("const ");
             TypeSpec.Emit(stream);
             stream.Write("& ");
             stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
+        }
+
+        public bool CompatibleWith(Expr arg, out string errorMessage)
+        {
+            errorMessage = string.Empty;
+            if (arg is VarExpr varExpr)
+            {
+                if (!varExpr.VarDecl.Mutable && 
+                    PassedBy == PassedBy.MutableBorrow)
+                    errorMessage = "Cannot mutably borrow an immutable variable";
+            }
+            else if (PassedBy == PassedBy.MutableBorrow)
+                errorMessage = "Cannot mutably borrow a non-variable expression";
+
+            return errorMessage.Length == 0;
         }
     }
 
@@ -695,6 +726,16 @@ $@"#include <iostream>
             {
                 // Try to find a matching function:
                 var fn = Block.FindFn(this);
+
+                // Verify that the expressions passed into the function 
+                // match the pass-by-tyep of each argument.
+                for (int i = 0; i < fn.Params.Count; i++)
+                {
+                    var param = fn.Params[i];
+                    var arg = Args[i];
+                    if (!param.CompatibleWith(arg, out var errorMessage))
+                        throw new CompileError(arg.Token, errorMessage);
+                }
 
                 stream.Write(Compiler.Prefix);
                 stream.Write(FnDecl.ReplaceOperatorSymbols(Id.Text));
@@ -1033,7 +1074,7 @@ $@"#include <iostream>
             // Declaration of a variable.
             var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
             var decl = new VarDecl(Block, Id, typeSpec, 
-                Mutable ? VarAccessType.MutableLocal : VarAccessType.ImmutableLocal);
+                Mutable ? VarAccess.MutableLocal : VarAccess.ImmutableLocal);
             if (!Mutable)
                 stream.Write("const ");
             decl.TypeSpec.Emit(stream);
@@ -1187,11 +1228,18 @@ $@"#include <iostream>
         }
     }
 
-    public enum VarAccessType
+    public enum VarAccess
     {
         ImmutableLocal,
         MutableLocal,
         DynamicLocal,
+        ImmutableBorrow,
+        MutableBorrow,
+        DynamicTake,
+    }
+
+    public enum PassedBy
+    {
         ImmutableBorrow,
         MutableBorrow,
         DynamicTake,

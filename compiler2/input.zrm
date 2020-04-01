@@ -173,18 +173,14 @@ fn print(Rat x)
     #cpp("std::cout << #__x.val;");
 }
 
-fn test(Int& a) -> Int
+fn test(Int a)
 {
-    a := 2;
-    let b = a;
-    return b;
+    let a := 2;
 }
 
 fn main() 
 {
-    let x := 1;
-    let y := test(x);
-    x := 3;
+    let x = 1;
+    test(x);
     print(x);
-    print(y);
 }
