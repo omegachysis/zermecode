@@ -87,7 +87,7 @@ $@"#include <iostream>
         public readonly Token Id;
         public readonly string CName;
         public readonly TypeSpec TypeSpec;
-        public readonly bool Mutable;
+        public readonly VarAccessType AccessType;
 
         public TypeDecl TypeDecl
         {
@@ -97,7 +97,29 @@ $@"#include <iostream>
             }
         }
 
-        public VarDecl(Block block, Token id, TypeSpec typeSpec, bool mutable)
+        public bool Mutable
+        {
+            get
+            {
+                return AccessType == VarAccessType.MutableBorrow || 
+                    AccessType == VarAccessType.MutableLocal || 
+                    AccessType == VarAccessType.DynamicLocal ||
+                    AccessType == VarAccessType.DynamicTake;
+            }
+        }
+
+        public bool Returnable
+        {
+            get
+            {
+                return AccessType == VarAccessType.DynamicLocal || 
+                    AccessType == VarAccessType.DynamicTake || 
+                    AccessType == VarAccessType.ImmutableLocal || 
+                    AccessType == VarAccessType.MutableLocal;
+            }
+        }
+
+        public VarDecl(Block block, Token id, TypeSpec typeSpec, VarAccessType accessType)
         {
             if (block.FindVar(new VarExpr(block, id), throws: false) != null)
                 CName = "x" + block.Vars[id.Text].CName;
@@ -107,7 +129,7 @@ $@"#include <iostream>
             Block = block;
             Id = id;
             TypeSpec = typeSpec;
-            Mutable = mutable;
+            AccessType = accessType;
         }
     }
 
@@ -386,8 +408,7 @@ $@"#include <iostream>
                 // Verify the type for each parameter is defined now:
                 Block.FindType(param.TypeSpec);
 
-                var varDecl = new VarDecl(Body, param.Id, param.TypeSpec, 
-                    mutable: param.PassByType == Param.PassBy.MutableBorrow);
+                var varDecl = new VarDecl(Body, param.Id, param.TypeSpec, param.PassedBy);
                 Body.Vars.Add(varDecl.Id.Text, varDecl);
             }
         }
@@ -523,15 +544,8 @@ $@"#include <iostream>
     {
         public readonly Block Block;
         public readonly TypeSpec TypeSpec;
-        public readonly PassBy PassByType;
+        public readonly VarAccessType PassedBy;
         public readonly Token Id;
-
-        public enum PassBy
-        {
-            ImmutableBorrow,
-            MutableBorrow,
-            DynamicTake,
-        }
 
         public TypeDecl TypeDecl
         {
@@ -541,11 +555,11 @@ $@"#include <iostream>
             }
         }
 
-        public Param(Block block, TypeSpec typeSpec, PassBy passBy, Token id)
+        public Param(Block block, TypeSpec typeSpec, VarAccessType passedBy, Token id)
         {
             Block = block;
             TypeSpec = typeSpec;
-            PassByType = passBy;
+            PassedBy = passedBy;
             Id = id;
         }
 
@@ -556,12 +570,12 @@ $@"#include <iostream>
 
         public override string ToString()
         {
-            return $"[P:{PassByType} {TypeSpec} {Id.Text}]";
+            return $"[P:{PassedBy} {TypeSpec} {Id.Text}]";
         }
 
         public void Emit(StreamWriter stream)
         {
-            if (PassByType == PassBy.ImmutableBorrow)
+            if (PassedBy == VarAccessType.ImmutableBorrow)
                 stream.Write("const ");
             TypeSpec.Emit(stream);
             stream.Write("& ");
@@ -821,6 +835,14 @@ $@"#include <iostream>
 
         public override Token Token => Value;
 
+        public VarDecl VarDecl
+        {
+            get
+            {
+                return Block.FindVar(this, throws: true)!.Value;
+            }
+        }
+
         public override TypeDecl TypeDecl
         {
             get
@@ -1010,7 +1032,8 @@ $@"#include <iostream>
         {
             // Declaration of a variable.
             var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
-            var decl = new VarDecl(Block, Id, typeSpec, Mutable);
+            var decl = new VarDecl(Block, Id, typeSpec, 
+                Mutable ? VarAccessType.MutableLocal : VarAccessType.ImmutableLocal);
             if (!Mutable)
                 stream.Write("const ");
             decl.TypeSpec.Emit(stream);
@@ -1070,6 +1093,14 @@ $@"#include <iostream>
             else
                 throw new CompileError(Token,
                     "Cannot return from outside a function");
+
+            // Check that we are returning something that can be returned.
+            if (Value is VarExpr varExpr)
+            {
+                if (!varExpr.VarDecl.Returnable)
+                    throw new CompileError(Value.Token,
+                        "Cannot return a borrowed variable");
+            }
 
             stream.Write("return ");
             Value?.Emit(stream);
@@ -1154,5 +1185,15 @@ $@"#include <iostream>
             Body.EmitImpl(stream);
             stream.WriteLine("}");
         }
+    }
+
+    public enum VarAccessType
+    {
+        ImmutableLocal,
+        MutableLocal,
+        DynamicLocal,
+        ImmutableBorrow,
+        MutableBorrow,
+        DynamicTake,
     }
 }

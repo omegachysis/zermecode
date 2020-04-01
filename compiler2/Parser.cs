@@ -241,7 +241,7 @@ namespace compiler2
                 var typeSpec = ParseTypeSpec(t);
 
                 // Look for a mutable borrow or a take indicator:
-                var passBy = Param.PassBy.ImmutableBorrow;
+                var passBy = VarAccessType.ImmutableBorrow;
                 var postMod = Next();
                 
                 Token argId;
@@ -251,7 +251,7 @@ namespace compiler2
                     if (postMod.Id == TokenId.Amp)
                     {
                         // Mutable borrow:
-                        passBy = Param.PassBy.MutableBorrow;
+                        passBy = VarAccessType.MutableBorrow;
                     }
                     else
                         throw new ParseError(postMod, "Expected identiifer or '&'");

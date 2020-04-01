@@ -8,9 +8,9 @@ type Bool
 
 type String 
 {
-    #cpp_forward("const char* val;");
+    #cpp_forward("std::string val;");
     #cpp_forward("#__String(const std::string& val) { 
-        this->val = val.c_str(); 
+        this->val = val; 
     }");
 }
 
@@ -41,10 +41,16 @@ type Rat
         mpq_set_str(val, from.c_str(), base); 
         mpq_canonicalize(val);
     }");
-    #cpp_forward("void operator=(const #__Rat& other) {
+
+    #cpp_forward("#__Rat(const #__Rat& other) {
+        mpq_init(val);
         mpq_set(val, other.val);
     }");
-    #cpp_forward("~#__Rat() {
+    #cpp_forward("#__Rat& operator=(const #__Rat& other) {
+        mpq_set(val, other.val);
+        return *this;
+    }");
+    #cpp_forward("~#__Rat() { 
         mpq_clear(val); 
     }");
 }
@@ -58,8 +64,14 @@ type Int
     #cpp_forward("#__Int(const std::string& from, const int& base) { 
         mpz_init_set_str(val, from.c_str(), base); 
     }");
-    #cpp_forward("void operator=(const #__Int& other) {
+
+    #cpp_forward("#__Int(const #__Int& other) {
+        mpz_init(val);
         mpz_set(val, other.val);
+    }");
+    #cpp_forward("#__Int& operator=(const #__Int& other) {
+        mpz_set(val, other.val);
+        return *this;
     }");
     #cpp_forward("~#__Int() { 
         mpz_clear(val); 
@@ -161,16 +173,18 @@ fn print(Rat x)
     #cpp("std::cout << #__x.val;");
 }
 
-fn test(Int& a)
+fn test(Int& a) -> Int
 {
     a := 2;
+    let b = a;
+    return b;
 }
 
 fn main() 
 {
     let x := 1;
+    let y := test(x);
+    x := 3;
     print(x);
-    println();
-    test(x);
-    print(x);
+    print(y);
 }
