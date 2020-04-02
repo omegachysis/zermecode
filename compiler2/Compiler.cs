@@ -8,20 +8,20 @@ namespace compiler2
 {
     public class CompileError : Exception 
     {
-        public CompileError(Token t, string? message = null) : base(
+        public CompileError(Token t, string message) : base(
             $"Line {t.Line}, Col {t.Col}\n{message}") { }
+
+        public CompileError(string message) : base(
+            $"{message}") { }
     }
 
     public class Compiler
     {
         public const string Prefix = "_ZRM_";
 
-        public static ast.Program Ast = new ast.Program();
-
         public bool Write(ast.Program ast, StreamWriter stream)
         {
-            Ast = ast;
-            if (!ast.Success)
+            if (ast.Body == null)
                 return false;
 
             try
@@ -43,17 +43,20 @@ namespace compiler2.ast
 {
     public class Program : IShowable
     {
-        public bool Success = false;
-        public string ErrorMessage = string.Empty;
-        public Block? Body = null;
+        public readonly Block? Body;
+
+        public Program(Block? body)
+        {
+            Body = body;
+        }
 
         public void Show()
         {
-            if (Success)
+            if (Body != null)
             {
                 Printer.Print("Program");
                 Printer.Print("");
-                Body?.Show();
+                Body.Show();
             }
             else
             {
@@ -63,7 +66,7 @@ namespace compiler2.ast
 
         public void Emit(StreamWriter stream)
         {
-            if (!Success) return;
+            if (Body == null) return;
 
             // Emit a preamble to wrap C++:
             stream.Write(
@@ -73,11 +76,18 @@ $@"#include <iostream>
 #include <string>
 ");
                 
-            Body?.EmitDecl(stream);
-            Body?.EmitImpl(stream);
+            Body.EmitDecl(stream);
+            Body.EmitImpl(stream);
+
+            // Check that there is a main function in the global scope.
+            var mainFn = Body.FindFn(new FnCall(Body, new Token(TokenId.Id,
+                "Main", 0, 0)));
+
+            if (mainFn == null)
+                throw new CompileError("No Main function found");
 
             stream.Write(
-                $"\nint main(){{{Compiler.Prefix}main__();}}");
+                $"\nint main(){{{Compiler.Prefix}Main__();}}");
         }
     }
 
@@ -270,14 +280,13 @@ $@"#include <iostream>
                 return matches.Single();
         }
 
-        public FnDecl FindFn(FnCall call)
+        public FnDecl? FindFn(FnCall call)
         {
             var matches = FindMatchingSignatures(call).ToArray();
             if (matches.Length == 0)
             {
                 if (Parent == null)
-                    throw new CompileError(call.Token,
-                        $"No matching function for {call}");
+                    return null;
                 return Parent.FindFn(call);
             }
             
@@ -797,7 +806,7 @@ $@"#include <iostream>
 
         public override Token Token => Id;
 
-        public FnDecl FnDecl => Block.FindFn(this);
+        public FnDecl FnDecl => Block.FindFn(this)!;
 
         public override TypeDecl TypeDecl
         {
@@ -838,7 +847,9 @@ $@"#include <iostream>
             else
             {
                 // Try to find a matching function:
-                var fn = Block.FindFn(this);
+                var fn = Block.FindFn(this) ?? 
+                    throw new CompileError(Token,
+                    "Cannot find matching function");
 
                 // Verify that the expressions passed into the function 
                 // match the pass-by-tyep of each argument.

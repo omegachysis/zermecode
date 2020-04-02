@@ -1,9 +1,10 @@
+
 type Test
 {
 
 }
 
-fn main() 
+fn Main() 
 {
-    let t := Test();
+    
 }

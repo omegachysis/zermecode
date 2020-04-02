@@ -15,29 +15,18 @@ namespace compiler2
         public ast.Program Parse(IEnumerator<Token> tokens)
         {
             this.tokens = tokens;
-            var ast = new ast.Program();
+            
+            var t = Next();
+            if (t.Id != TokenId.Begin)
+                throw new InvalidOperationException();
 
-            try
-            {
-                var t = Next();
-                if (t.Id != TokenId.Begin)
-                    throw new InvalidOperationException();
+            var body = ParseBlock(Next(), oneStatement: false);
+            var ast = new ast.Program(body);
 
-                ast.Body = ParseBlock(Next(), oneStatement: false);
+            t = Next();
+            if (t.Id != TokenId.Eof)
+                throw new ParseError(t, "Expected end of file");
 
-                t = Next();
-                if (t.Id != TokenId.Eof)
-                    throw new ParseError(t, "Expected end of file");
-            }
-            catch (ParseError err)
-            {
-                Console.WriteLine(err.ToString());
-                ast.Success = false;
-                ast.ErrorMessage = err.Message;
-                return ast;
-            }
-
-            ast.Success = true;
             return ast;
         }
 
