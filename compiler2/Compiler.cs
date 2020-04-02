@@ -456,12 +456,6 @@ $@"#include <iostream>
             return $"[FnD:{Id.Text}({args}) -> {ReturnType}]";
         }
 
-        public static string ReplaceOperatorSymbols(string text)
-        {
-            return text.Replace('+','a').Replace('-','s')
-                .Replace('*','m').Replace('/','d').Replace('^','e');
-        }
-
         private void EmitPrototype(StreamWriter stream)
         {
             // Emit return type:
@@ -475,7 +469,7 @@ $@"#include <iostream>
             // and also a return suffix because our languages counts 
             // return type in a function signature.
             stream.Write(Compiler.Prefix);
-            stream.Write(ReplaceOperatorSymbols(Id.Text));
+            stream.Write(Id.Text);
             stream.Write("__");
             ReturnType?.Emit(stream);
             stream.Write('(');
@@ -677,6 +671,114 @@ $@"#include <iostream>
         public abstract void Emit(StreamWriter stream);
     }
 
+    public class Conjunction : Expr 
+    {
+        public readonly Expr Left;
+        public readonly Expr Right;
+
+        public override Token Token => Left.Token;
+
+        public override TypeDecl TypeDecl => Block.FindType("Bool");
+
+        public Conjunction(Block block, Expr left, Expr right) : base(block)
+        {
+            Left = left;
+            Right = right;
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            stream.Write(Compiler.Prefix);
+            stream.Write("Bool(");
+            Left.Emit(stream);
+            stream.Write(".val &&");
+            Right.Emit(stream);
+            stream.Write(".val");
+            stream.Write(')');
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[{Left} && {Right}]";
+        }
+    }
+
+    public class Disjunction : Expr 
+    {
+        public readonly Expr Left;
+        public readonly Expr Right;
+
+        public override Token Token => Left.Token;
+
+        public override TypeDecl TypeDecl => Block.FindType("Bool");
+
+        public Disjunction(Block block, Expr left, Expr right) : base(block)
+        {
+            Left = left;
+            Right = right;
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            stream.Write(Compiler.Prefix);
+            stream.Write("Bool(");
+            Left.Emit(stream);
+            stream.Write(".val ||");
+            Right.Emit(stream);
+            stream.Write(".val");
+            stream.Write(')');
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[{Left} || {Right}]";
+        }
+    }
+
+    public class BooleanNegated : Expr 
+    {
+        public readonly Token Op;
+        public readonly Expr Value;
+
+        public override Token Token => Value.Token;
+
+        public override TypeDecl TypeDecl => Block.FindType("Bool");
+
+        public BooleanNegated(Block block, Token op, Expr value) : base(block)
+        {
+            Op = op;
+            Value = value;
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            stream.Write(Compiler.Prefix);
+            stream.Write("Bool(!(");
+            Value.Emit(stream);
+            stream.Write(").val)");
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+        }
+
+        public override string ToString()
+        {
+            return $"[! {Value}]";
+        }
+    }
+
     public class FnCall : Expr
     {
         public readonly Token Id;
@@ -738,7 +840,7 @@ $@"#include <iostream>
                 }
 
                 stream.Write(Compiler.Prefix);
-                stream.Write(FnDecl.ReplaceOperatorSymbols(Id.Text));
+                stream.Write(Id.Text);
                 // Functions also have suffixes relating to return type:
                 stream.Write("__");
                 fn.ReturnType?.Emit(stream);

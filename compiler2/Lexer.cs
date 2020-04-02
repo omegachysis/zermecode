@@ -128,7 +128,7 @@ namespace compiler2
                     }
                     else
                     {
-                        yield return new Token(TokenId.Op, "-", line, col - 1);
+                        yield return new Token(TokenId.Minus, "-", line, col - 1);
                         goto Backtrack;
                     }
                 }
@@ -156,7 +156,7 @@ namespace compiler2
                     }
                     else
                     {
-                        yield return new Token(TokenId.Op, "/", line, col - 1);
+                        yield return new Token(TokenId.FSlash, line, col - 1);
                         goto Backtrack;
                     }
                 }
@@ -180,12 +180,82 @@ namespace compiler2
                 else if (c == '&')
                 {
                     yield return Finish();
-                    yield return new Token(TokenId.Amp, line, col - 1);
+                    c = Next();
+                    if (c == '&')
+                        yield return new Token(TokenId.DoubleAmp, line, col - 2);
+                    else
+                    {
+                        yield return new Token(TokenId.Amp, line, col - 1);
+                        goto Backtrack;
+                    }
                 }
-                else if (c == '*' || c == '+' || c == '-' || c == '^')
+                else if (c == '|')
                 {
                     yield return Finish();
-                    yield return new Token(TokenId.Op, c.ToString(), line, col);
+                    c = Next();
+                    if (c == '|')
+                        yield return new Token(TokenId.DoublePipe, line, col - 2);
+                    else
+                    {
+                        yield return new Token(TokenId.Pipe, line, col - 1);
+                        goto Backtrack;
+                    }
+                }
+                else if (c == '!')
+                {
+                    yield return Finish();
+                    c = Next();
+                    if (c == '=')
+                        yield return new Token(TokenId.NotEq, line, col - 2);
+                    else
+                    {
+                        yield return new Token(TokenId.Exclam, line, col - 1);
+                        goto Backtrack;
+                    }
+                }
+                else if (c == '>')
+                {
+                    yield return Finish();
+                    c = Next();
+                    if (c == '=')
+                        yield return new Token(TokenId.RAngleEq, line, col - 2);
+                    else
+                    {
+                        yield return new Token(TokenId.RAngle, line, col - 1);
+                        goto Backtrack;
+                    }
+                }
+                else if (c == '<')
+                {
+                    yield return Finish();
+                    c = Next();
+                    if (c == '=')
+                        yield return new Token(TokenId.LAngleEq, line, col - 2);
+                    else
+                    {
+                        yield return new Token(TokenId.LAngle, line, col - 1);
+                        goto Backtrack;
+                    }
+                }
+                else if (c == '+')
+                {
+                    yield return Finish();
+                    yield return new Token(TokenId.Plus, line, col - 1);
+                }
+                else if (c == '-')
+                {
+                    yield return Finish();
+                    yield return new Token(TokenId.Minus, line, col - 1);
+                }
+                else if (c == '*')
+                {
+                    yield return Finish();
+                    yield return new Token(TokenId.Star, line, col - 1);
+                }
+                else if (c == '^')
+                {
+                    yield return Finish();
+                    yield return new Token(TokenId.Caret, line, col - 1);
                 }
                 else if (c == '"')
                 {
