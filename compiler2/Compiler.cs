@@ -135,12 +135,12 @@ $@"#include <iostream>
 
     public class Block : IShowable
     {
-        public Token Token;
+        public readonly Token Token;
 
-        public HashSet<TypeDecl> TypeDecls = new HashSet<ast.TypeDecl>();
-        public HashSet<FnDecl> FnDecls = new HashSet<ast.FnDecl>();
-        public List<Stmt> Stmts = new List<ast.Stmt>();
-        public Block? Parent;
+        public readonly HashSet<TypeDecl> TypeDecls = new HashSet<ast.TypeDecl>();
+        public readonly HashSet<FnDecl> FnDecls = new HashSet<ast.FnDecl>();
+        public readonly List<Stmt> Stmts = new List<ast.Stmt>();
+        public readonly Block? Parent;
 
         /// <summary>
         /// Refers to the parent declaration if this is a function or a type decl.
@@ -324,8 +324,8 @@ $@"#include <iostream>
 
     public abstract class Decl : IShowable
     {
-        public Token Id;
-        public Block Block;
+        public readonly Token Id;
+        public readonly Block Block;
 
         public Decl(Block block, Token id)
         {
@@ -338,7 +338,7 @@ $@"#include <iostream>
 
     public class TypeDecl : Decl
     {
-        public Block Body;
+        public readonly Block Body;
 
         public TypeDecl(Block block, Token id, Block body) : base(block, id) 
         {
@@ -882,11 +882,10 @@ $@"#include <iostream>
     
     public class NumExpr : Expr
     {
-        public Token Value;
+        public readonly Token Value;
+        public readonly NumLiteralType LitType;
         
         public override Token Token => Value;
-
-        public readonly NumLiteralType LitType;
 
         public override TypeDecl TypeDecl
         {
@@ -985,7 +984,7 @@ $@"#include <iostream>
     
     public class VarExpr : Expr
     {
-        public Token Value;
+        public readonly Token Value;
 
         public override Token Token => Value;
 
@@ -1030,7 +1029,7 @@ $@"#include <iostream>
 
     public class StrExpr : Expr
     {
-        public Token Value;
+        public readonly Token Value;
 
         public override Token Token => Value;
 
@@ -1072,7 +1071,7 @@ $@"#include <iostream>
 
     public class BoolExpr : Expr
     {
-        public Token Value;
+        public readonly Token Value;
 
         public override Token Token => Value;
 
@@ -1203,7 +1202,7 @@ $@"#include <iostream>
 
     public class ReturnStmt : Stmt
     {
-        public Expr? Value;
+        public readonly Expr? Value;
 
         public override Token Token { get; }
 
@@ -1264,8 +1263,8 @@ $@"#include <iostream>
 
     public class IfStmt : Stmt
     {
-        public Expr Condition;
-        public Block Body;
+        public readonly Expr Condition;
+        public readonly Block Body;
 
         public override Token Token { get; }
 
@@ -1309,8 +1308,8 @@ $@"#include <iostream>
 
     public class UnlessStmt : Stmt
     {
-        public Expr Condition;
-        public Block Body;
+        public readonly Expr Condition;
+        public readonly Block Body;
 
         public override Token Token { get; }
 
@@ -1354,7 +1353,7 @@ $@"#include <iostream>
 
     public class ElseStmt : Stmt
     {
-        public Block Body;
+        public readonly Block Body;
 
         public override Token Token { get; }
 
@@ -1374,7 +1373,7 @@ $@"#include <iostream>
 
         public override string ToString()
         {
-            return $"[Else]";
+            return "[Else]";
         }
 
         public override void Emit(StreamWriter stream)
