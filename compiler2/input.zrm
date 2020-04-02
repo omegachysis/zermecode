@@ -30,31 +30,6 @@ type Float64
     }");
 }
 
-type Rat 
-{
-    #cpp_forward("mpq_t val;");
-    #cpp_forward("#__Rat() { 
-        mpq_init(val); 
-    }");
-    #cpp_forward("#__Rat(const std::string& from, const int& base) { 
-        mpq_init(val); 
-        mpq_set_str(val, from.c_str(), base); 
-        mpq_canonicalize(val);
-    }");
-
-    #cpp_forward("#__Rat(const #__Rat& other) {
-        mpq_init(val);
-        mpq_set(val, other.val);
-    }");
-    #cpp_forward("#__Rat& operator=(const #__Rat& other) {
-        mpq_set(val, other.val);
-        return *this;
-    }");
-    #cpp_forward("~#__Rat() { 
-        mpq_clear(val); 
-    }");
-}
-
 type Int 
 {
     #cpp_forward("mpz_t val;");
@@ -75,6 +50,45 @@ type Int
     }");
     #cpp_forward("~#__Int() { 
         mpz_clear(val); 
+    }");
+}
+
+type Rat 
+{
+    #cpp_forward("mpq_t val;");
+    #cpp_forward("#__Rat() { 
+        mpq_init(val); 
+    }");
+    #cpp_forward("#__Rat(const std::string& from, const int& base) { 
+        mpq_init(val); 
+        mpq_set_str(val, from.c_str(), base); 
+        mpq_canonicalize(val);
+    }");
+    #cpp_forward("#__Rat(const #__Int& other) {
+        mpq_init(val); 
+        mpq_set_z(val, other.val);
+    }");
+    #cpp_forward("#__Rat(const #__Int& n, const #__Int& d) {
+        mpq_init(val);
+        mpq_set_z(val, n.val);
+        mpq_t d_val;
+        mpq_init(d_val);
+        mpq_set_z(d_val, d.val);
+        mpq_div(val, val, d_val);
+        mpq_clear(d_val);
+        mpq_canonicalize(val);
+    }");
+
+    #cpp_forward("#__Rat(const #__Rat& other) {
+        mpq_init(val);
+        mpq_set(val, other.val);
+    }");
+    #cpp_forward("#__Rat& operator=(const #__Rat& other) {
+        mpq_set(val, other.val);
+        return *this;
+    }");
+    #cpp_forward("~#__Rat() { 
+        mpq_clear(val); 
     }");
 }
 
@@ -110,12 +124,9 @@ fn op *(Int a, Int b) -> Int
     return res;");
 }
 
-fn op /(Int a, Int b) -> Int 
+fn op /(Int a, Int b) -> Rat 
 {
-    #cpp("
-    #__Int res;
-    mpz_pow_ui(res.val, #__a.val, mpz_get_ui(#__b.val));
-    return res;");
+    #cpp("return #__Rat(#__a, #__b)");
 }
 
 fn op ^(Int a, Int b) -> Int 
@@ -154,6 +165,46 @@ fn op >=(Int a, Int b) -> Bool
 fn op <=(Int a, Int b) -> Bool 
 {
     #cpp("return mpz_cmp(#__a.val, #__b.val) <= 0");
+}
+
+fn op +(Rat a, Rat b) -> Rat 
+{
+    #cpp("
+    #__Rat res;
+    mpq_add(res.val, #__a.val, #__b.val);
+    return res;");
+}
+
+fn op -(Rat a, Rat b) -> Rat 
+{
+    #cpp("
+    #__Rat res;
+    mpq_sub(res.val, #__a.val, #__b.val);
+    return res;");
+}
+
+fn op -(Rat a) -> Rat 
+{
+    #cpp("
+    #__Rat res;
+    mpq_neg(res.val, #__a.val);
+    return res;");
+}
+
+fn op *(Rat a, Rat b) -> Rat
+{
+    #cpp("
+    #__Rat res;
+    mpq_mul(res.val, #__a.val, #__b.val);
+    return res;");
+}
+
+fn op /(Rat a, Rat b) -> Rat 
+{
+    #cpp("
+    #__Rat res;
+    mpq_div(res.val, #__a.val, #__b.val);
+    return res;");
 }
 
 fn op +(Float32 a, Float32 b) -> Float32 
@@ -211,20 +262,13 @@ fn print(Rat x)
     #cpp("std::cout << #__x.val;");
 }
 
-fn test1() -> Int
-{
-    print("(test1)");
-    return 1;
-}
-
-fn test2() -> Int
-{
-    print("(test2)");
-    return 2;
-}
-
 fn main() 
 {
-    unless !(test1() = 1 || test2() = 2) then
-        print("(good)");
+    let a = 0.888;
+    let b = 1/3;
+    print(a);
+    println();
+    print(b);
+    println();
+    print(a + b);
 }
