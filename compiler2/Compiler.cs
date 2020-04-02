@@ -167,6 +167,13 @@ $@"#include <iostream>
                 throw new CompileError(Stmts.First().Token,
                 $"Statements not allowed in the global block");
 
+            var typeDeclIds = new HashSet<string>();
+            foreach (var decl in TypeDecls)
+            {
+                typeDeclIds.Add(decl.Id.Text);
+                decl.EmitForwardDecl(stream);
+            }
+
             // Some metafunctions should be emitted within the type declaration 
             // itself. Emit those now.
             if (ParentDecl is TypeDecl)
@@ -183,12 +190,8 @@ $@"#include <iostream>
                 }
             }
 
-            var typeDeclIds = new HashSet<string>();
             foreach (var decl in TypeDecls)
-            {
-                typeDeclIds.Add(decl.Id.Text);
                 decl.EmitDecl(stream);
-            }
 
             foreach (var decl in FnDecls)
             {
@@ -362,6 +365,14 @@ $@"#include <iostream>
         public override string ToString()
         {
             return $"[TyD:{Id.Text}]";
+        }
+
+        public void EmitForwardDecl(StreamWriter stream)
+        {
+            stream.Write("struct ");
+            stream.Write(Compiler.Prefix);
+            stream.Write(Id.Text);
+            stream.Write(';');
         }
 
         public void EmitDecl(StreamWriter stream)
