@@ -272,9 +272,15 @@ namespace compiler2
                         }
                         else if (c == '\\')
                         {
-                            builder.Append('\\');
-                            // Escaped character.
-                            builder.Append(Next());
+                            c = Next();
+                            if (c == '"')
+                                builder.Append("\"");
+                            else
+                            {
+                                builder.Append('\\');
+                                // Escaped character.
+                                builder.Append(c);
+                            }
                         }
                         else
                             builder.Append(c);

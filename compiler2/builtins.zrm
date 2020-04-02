@@ -247,6 +247,11 @@ fn println(String str)
     #cpp("std::cout << #__str.val << std::endl;");
 }
 
+fn print(Bool x) 
+{
+    #cpp("std::cout << (#__x.val ? \"True\" : \"False\");");
+}
+
 fn print(Int x) 
 {
     #cpp("std::cout << #__x.val;");
