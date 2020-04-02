@@ -252,6 +252,8 @@ namespace compiler2
             else if (IsKeyword(t, "return", TokenId.Return, out res)) return res;
             else if (IsKeyword(t, "type", TokenId.Type, out res)) return res;
             else if (IsKeyword(t, "if", TokenId.If, out res)) return res;
+            else if (IsKeyword(t, "unless", TokenId.Unless, out res)) return res;
+            else if (IsKeyword(t, "then", TokenId.Then, out res)) return res;
             else if (IsKeyword(t, "else", TokenId.Else, out res)) return res;
             else if (IsKeyword(t, "let", TokenId.Let, out res)) return res;
 

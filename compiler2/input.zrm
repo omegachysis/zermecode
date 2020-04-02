@@ -173,14 +173,15 @@ fn print(Rat x)
     #cpp("std::cout << #__x.val;");
 }
 
-fn test(Int a)
-{
-    let a := 2;
-}
-
 fn main() 
 {
-    let x = 1;
-    test(x);
+    let x := 1;
+    unless False { 
+        x := 2;
+    }
+    else {
+        x := 3;
+    }
+
     print(x);
 }

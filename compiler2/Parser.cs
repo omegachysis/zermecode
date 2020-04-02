@@ -152,18 +152,39 @@ namespace compiler2
                     // If statement.
                     t = Next();
 
-                    if (t.Id != TokenId.LParen)
-                        throw new ParseError(t, "Expected '('");
                     var cond = ParseExpr(t, out var la);
 
                     Block body;
                     if (la.Id == TokenId.Begin)
                         body = ParseBlock(Next(), oneStatement: false);
+                    else if (la.Id == TokenId.Then)
+                        body = ParseBlock(Next(), oneStatement: true);
                     else
-                        body = ParseBlock(la, oneStatement: true);
+                        throw new ParseError(la, "Expected 'then' or '{'");
 
                     block!.Stmts.Add(new ast.IfStmt(
                         block!, ifToken, cond, body
+                    ));
+                }
+                else if (t.Id == TokenId.Unless)
+                {
+                    var unlessToken = t;
+
+                    // Unless statement.
+                    t = Next();
+
+                    var cond = ParseExpr(t, out var la);
+
+                    Block body;
+                    if (la.Id == TokenId.Begin)
+                        body = ParseBlock(Next(), oneStatement: false);
+                    else if (la.Id == TokenId.Then)
+                        body = ParseBlock(Next(), oneStatement: true);
+                    else
+                        throw new ParseError(la, "Expected 'then' or '{'");
+
+                    block!.Stmts.Add(new ast.UnlessStmt(
+                        block!, unlessToken, cond, body
                     ));
                 }
                 else if (t.Id == TokenId.Else)

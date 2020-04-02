@@ -58,4 +58,6 @@ public enum TokenId
     Else,
     Let,
     Amp,
+    Then,
+    Unless,
 }

@@ -1194,6 +1194,51 @@ $@"#include <iostream>
         }
     }
 
+    public class UnlessStmt : Stmt
+    {
+        public Expr Condition;
+        public Block Body;
+
+        public override Token Token { get; }
+
+        public UnlessStmt(Block block, Token unlessToken, Expr cond, Block body) : base(block)
+        {
+            Token = unlessToken;
+            Condition = cond;
+            Body = body;
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+            Printer.Promote();
+            Body.Show();
+            Printer.Demote();
+        }
+
+        public override string ToString()
+        {
+            return $"[Unless:{Condition}]";
+        }
+
+        public override void Emit(StreamWriter stream)
+        {
+            if (Condition.TypeDecl != Block.Global().FindType("Bool"))
+                throw new CompileError(Condition.Token, 
+                    "If conditional must be a boolean expression");
+
+            stream.Write("if(!(");
+            Condition.Emit(stream);
+            stream.Write(".val");
+            stream.WriteLine(")){");
+
+            Body.EmitDecl(stream);
+            Body.EmitImpl(stream);
+
+            stream.WriteLine("}");
+        }
+    }
+
     public class ElseStmt : Stmt
     {
         public Block Body;
