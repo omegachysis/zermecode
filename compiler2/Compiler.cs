@@ -19,22 +19,11 @@ namespace compiler2
     {
         public const string Prefix = "_ZRM_";
 
-        public bool Write(ast.Program ast, StreamWriter stream)
+        public void Write(ast.Program ast, StreamWriter stream)
         {
             if (ast.Body == null)
-                return false;
-
-            try
-            {
-                ast.Emit(stream);
-                return true;
-            }
-            catch (CompileError err)
-            {
-                Console.WriteLine("Error compiling the program: ");
-                Console.WriteLine(err.ToString());
-                return false;
-            }
+                throw new InvalidOperationException("AST is invalid");
+            ast.Emit(stream);
         }
     }
 }

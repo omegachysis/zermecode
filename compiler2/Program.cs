@@ -22,7 +22,17 @@ namespace compiler2
 
                 Console.WriteLine("Parsing...");
                 var sw = Stopwatch.StartNew();
-                ast = parser.Parse(tokens);
+
+                try
+                {
+                    ast = parser.Parse(tokens);
+                }
+                catch (ParseError)
+                {
+                    Console.WriteLine("Error parsing the program:");
+                    throw;
+                }
+
                 sw.Stop();
 
                 Console.WriteLine($"Parsed: {sw.ElapsedMilliseconds} ms");
@@ -33,16 +43,22 @@ namespace compiler2
 
             Console.WriteLine("Transpiling...");
             var compiler = new Compiler();
-            bool success;
             var sw1 = Stopwatch.StartNew();
             using (var outStream = new StreamWriter("bin/ir.cpp"))
-                success = compiler.Write(ast, outStream);
+            {
+                try
+                {
+                    compiler.Write(ast, outStream);
+                }
+                catch (CompileError)
+                {
+                    File.Delete("bin/ir.cpp");
+                    Console.WriteLine("Error compiling the program:");
+                    throw;
+                }
+            }
             sw1.Stop();
-
             Console.WriteLine($"Transpiled: {sw1.ElapsedMilliseconds} ms");
-
-            if (!success)
-                File.Delete("bin/ir.cpp");
         }
     }
 }
