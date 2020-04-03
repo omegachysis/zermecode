@@ -52,6 +52,7 @@ namespace compiler2
                 }
                 catch (CompileError)
                 {
+                    outStream.Close();
                     File.Delete("bin/ir.cpp");
                     Console.WriteLine("Error compiling the program:");
                     throw;

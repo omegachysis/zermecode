@@ -232,37 +232,37 @@ fn op ^(Float32 a, Float32 b) -> Float32
     #cpp("return #__Float32(std::pow(#__a.val, #__b.val));");
 }
 
-fn print(String str) 
+fn Print(String str) 
 {
     #cpp("std::cout << #__str.val;");
 }
 
-fn println() 
+fn Println() 
 {
     #cpp("std::cout << std::endl;");
 }
 
-fn println(String str) 
+fn Println(String str) 
 {
     #cpp("std::cout << #__str.val << std::endl;");
 }
 
-fn print(Bool x) 
+fn Print(Bool x) 
 {
     #cpp("std::cout << (#__x.val ? \"True\" : \"False\");");
 }
 
-fn print(Int x) 
+fn Print(Int x) 
 {
     #cpp("std::cout << #__x.val;");
 }
 
-fn print(Float32 x) 
+fn Print(Float32 x) 
 {
     #cpp("std::cout << #__x.val;");
 }
 
-fn print(Rat x) 
+fn Print(Rat x) 
 {
     #cpp("std::cout << #__x.val;");
 }

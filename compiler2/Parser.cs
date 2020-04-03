@@ -11,6 +11,7 @@ namespace compiler2
         private IEnumerator<Token>? tokens;
         private Stack<Block> blocks = new Stack<Block>();
         private Block? block => blocks.Count == 0 ? null : blocks.Peek();
+        private bool AllowNamedArgs = false;
 
         public ast.Program Parse(IEnumerator<Token> tokens)
         {
@@ -305,6 +306,7 @@ namespace compiler2
 
         private ast.FnCall ParseFnCall(Token fnId)
         {
+            AllowNamedArgs = true;
             var args = new List<ast.Expr>();
             while (true)
             {
@@ -323,6 +325,7 @@ namespace compiler2
                 }
             }
 
+            AllowNamedArgs = false;
             return new ast.FnCall(block!, fnId)
             {
                 Args = args,
@@ -453,12 +456,24 @@ namespace compiler2
                     // Function call.
                     var fnCall = ParseFnCall(fnId: t);
                     la = Next();
+                    VerifyExpressionFollow(la);
                     return fnCall;
+                }
+                else if (t1.Id == TokenId.Colon)
+                {
+                    if (!AllowNamedArgs)
+                        throw new ParseError(t1, "Named arguments not allowed in this context");
+
+                    // Named argument.
+                    var val = ParseExpr(Next(), out la);
+                    val.NamedArg = t;
+                    return val;
                 }
                 else
                 {
                     // Variable.
                     la = t1;
+                    VerifyExpressionFollow(la);
                     return new ast.VarExpr(block!, t);
                 }
             }
@@ -466,12 +481,14 @@ namespace compiler2
             {
                 // Number literals.
                 la = Next();
+                VerifyExpressionFollow(la);
                 return new ast.NumExpr(block!, t);
             }
             else if (t.Id == TokenId.Str)
             {
                 // String literals.
                 la = Next();
+                VerifyExpressionFollow(la);
                 return new ast.StrExpr(block!, t);
             }
             else if (t.Id == TokenId.Minus)
@@ -479,6 +496,7 @@ namespace compiler2
                 // Unary negation, interpret as a negation function.
                 var toNegate = ParseFactor(Next(), out var la1);
                 la = la1;
+                VerifyExpressionFollow(la);
                 return ConvertOpExprToFunctionCall(t, toNegate);
             }
             else if (t.Id == TokenId.Exclam)
@@ -486,6 +504,7 @@ namespace compiler2
                 // Boolean negation.
                 var toNegate = ParseFactor(Next(), out var la1);
                 la = la1;
+                VerifyExpressionFollow(la);
                 return new ast.BooleanNegated(block!, t, toNegate);
             }
             else if (t.Id == TokenId.LParen)
@@ -497,16 +516,37 @@ namespace compiler2
                     throw new ParseError(la1, "Expected ')'");
                 
                 la = Next();
+                VerifyExpressionFollow(la);
                 return expr;
             }
             else if (t.Id == TokenId.Bool)
             {
                 // Boolean literal (true/false).
                 la = Next();
+                VerifyExpressionFollow(la);
                 return new ast.BoolExpr(block!, t);
             }
             else
                 throw new ParseError(t, "Expected identifier or literal");
+        }
+
+        private void VerifyExpressionFollow(Token t1)
+        {
+            if (t1.Id == TokenId.Amp || 
+                t1.Id == TokenId.DoubleAmp || 
+                t1.Id == TokenId.Pipe || 
+                t1.Id == TokenId.DoublePipe || 
+                t1.Id == TokenId.Caret || 
+                t1.Id == TokenId.Comma || 
+                t1.Id == TokenId.Semi || 
+                t1.Id == TokenId.Then || 
+                t1.Id == TokenId.Star || 
+                t1.Id == TokenId.Plus || 
+                t1.Id == TokenId.Minus || 
+                t1.Id == TokenId.FSlash || 
+                t1.Id == TokenId.RParen) {}
+            else
+                throw new ParseError(t1, "Expected operator, 'then', ',', ')', or ';'");
         }
 
         private ast.TypeSpec ParseTypeSpec(Token t)

@@ -483,14 +483,16 @@ $@"#include <iostream>
             ReturnType?.Emit(stream);
             stream.Write('(');
 
-            foreach (var param in Params.Take(Params.Count - 1))
+            var isFirst = true;
+            foreach (var param in Params)
             {
+                if (!isFirst)
+                    stream.Write(',');
+                else
+                    isFirst = false;
                 param.Emit(stream);
-                stream.Write(',');
+                
             }
-
-            if (Params.Count > 0)
-                Params.Last().Emit(stream);
 
             stream.Write(')');
         }
@@ -665,6 +667,7 @@ $@"#include <iostream>
     public abstract class Expr : IShowable
     {
         public readonly Block Block;
+        public Token? NamedArg = null;
 
         public Expr(Block block)
         {
@@ -823,7 +826,14 @@ $@"#include <iostream>
 
         public override string ToString()
         {
-            var args = string.Join(',', Args.Select(x => x.ToString()));
+            var args = string.Join(',', Args.Select(
+                x => {
+                    if (x.NamedArg.HasValue)
+                        return $"[NArg:{x.NamedArg.Value.Text}:{x}]";
+                    else
+                        return x.ToString();
+                }
+            ));
             return $"[FnC:{Id.Text}({args})]";
         }
 
@@ -858,14 +868,63 @@ $@"#include <iostream>
 
                 // Write function arguments:
                 stream.Write('(');
-                foreach (var arg in Args.Take(Args.Count - 1))
+
+                var actualArgs = new Expr[Args.Count];
+
+                // Process as named args to get a new order of arguments to pass in.
+                var namedArgsStarted = false;
+                var index = 0;
+                var namedArgs = new HashSet<string>();
+                foreach (var arg in Args)
                 {
-                    arg.Emit(stream);
-                    stream.Write(',');
+                    if (arg.NamedArg.HasValue)
+                    {
+                        namedArgsStarted = true;
+
+                        if (!namedArgs.Add(arg.NamedArg.Value.Text))
+                            throw new CompileError("Named argument already specified");
+
+                        // Find the matching named parameter.
+                        var paramIndex = fn.Params.FindIndex(
+                            x => x.Id.Text == arg.NamedArg.Value.Text);
+
+                        if (paramIndex == -1)
+                            throw new CompileError("Named argument not found");
+                        else
+                        {
+                            if (actualArgs[paramIndex] != null)
+                                throw new CompileError("Argument already specified");
+                            actualArgs[paramIndex] = arg;
+                        }
+                    }
+                    else
+                    {
+                        if (namedArgsStarted)
+                            throw new CompileError(
+                                "Positional arguments cannot follow named arguments");
+
+                        actualArgs[index] = arg;
+                        index += 1;
+                    }
                 }
 
-                if (Args.Count > 0)
-                    Args.Last().Emit(stream);
+                // Check for missing arguments.
+                if (actualArgs.Any(x => x == null))
+                    throw new CompileError("Missing one or more required arguments");
+                
+                // Process the generated array of positional args.
+                var firstArg = true;
+                foreach (var arg in actualArgs)
+                {
+                    if (!firstArg)
+                        stream.Write(',');
+                    else
+                        firstArg = false;
+
+                    
+
+                    arg.Emit(stream);
+                }
 
                 stream.Write(")");
             }
