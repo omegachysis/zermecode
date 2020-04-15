@@ -26,6 +26,14 @@ public struct Token
         Col = col;
     }
 
+    public Token(string text)
+    {
+        Id = TokenId.Id;
+        Text = text;
+        Line = -1;
+        Col = -1;
+    }
+
     public override string ToString()
     {
         return $"({Id} `{Regex.Escape(Text)}` @ {Line}:{Col})";

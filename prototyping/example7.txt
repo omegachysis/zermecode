@@ -1,0 +1,67 @@
+
+// If the proposition is not proven, try to prove it now. If it can't be 
+// proven, raise a compile error.
+#prove(proposition);
+
+// Adds the proposition as a logical constraint to this scope.
+#require(proposition);
+
+// Verifies that the proposition is true, but only in debug mode.
+// Adds the proposition as a proven claim. If the proposition is not 
+// true in debug mode, throws a runtime exception.
+#verify(proposition);
+
+// Same as above, but also verified in release mode.
+verify()
+
+
+fn test(Int x) {
+    if (x >= 0) // (x >= 0) => (<return val> = 1)
+                // (x >= 0)
+        1       // (<return val> = 1)
+    else        // (!(x >= 0)) => (<return val> = -1)
+                // (!(x >= 0))
+        -1      // (<return val> = -1)
+}
+
+fn main() {
+    test(1);
+    // (x = 1)
+    // does (x = 1) => (x >= 0)  :: YES
+    // M.P. :: (<return val> = 1)
+}
+
+|- 
+|>
+~= 
+
+foo := ...;
+
+foo.select(_.y).where(_ > 2);
+foo.select(x, y => x > y);
+_ > _ === a, b => a > b
+_ > x === a => a > x
+
+foo(_, _, x) === a, b => foo(a, b, x)
+foo(x, _, y) === a => foo(x, a, y)
+foo(x, _, _) === a, b => foo(x, a, b)
+
+fn main(Int x) -> Int {
+
+}
+
+fn increment(&Int x) {
+    x += 1;
+}
+
+fn main() {
+    x = 2;
+    increment(x); // ERROR
+    increment(let x := 2); // Inline assignment.
+}
+
+let x := 2 is functionally the same as x := 2,
+except it also returns the value of the lhs of the assignment.
+
+
+

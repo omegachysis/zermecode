@@ -1,23 +1,14 @@
-type Bool
-{
-    #cpp_forward("bool val;");
-    #cpp_forward("#__Bool(bool val) { 
-        this->val = val; 
-    }");
-}
 
-fn Print(Bool x) 
+type Test
 {
-    #cpp("std::cout << (#__x.val ? \"True\" : \"False\");");
-}
-
-fn Test(Bool a, Bool b)
-{
-    Print(a);
-    Print(b);
+    fn foo()
+    {
+        
+    }
 }
 
 fn Main() 
 {
-    Test(False, b: True);
+    let t := Test();
+    t.foo();
 }

@@ -19,7 +19,7 @@ namespace compiler2
     {
         public const string Prefix = "_ZRM_";
 
-        public void Write(ast.Program ast, StreamWriter stream)
+        public void Write(ast.Program ast, TranspilerStream stream)
         {
             if (ast.Body == null)
                 throw new InvalidOperationException("AST is invalid");
@@ -53,7 +53,7 @@ namespace compiler2.ast
             }
         }
 
-        public void Emit(StreamWriter stream)
+        public void Emit(TranspilerStream stream)
         {
             if (Body == null) return;
 
@@ -159,7 +159,7 @@ $@"#include <iostream>
             return $"[Bl:{Token}]";
         }
 
-        public void EmitDecl(StreamWriter stream)
+        public void EmitDecl(TranspilerStream stream)
         {
             // If this is the global block, don't allow statements.
             if (Parent == null && Stmts.Count > 0)
@@ -194,7 +194,7 @@ $@"#include <iostream>
 
             foreach (var decl in FnDecls)
             {
-                if (typeDeclIds.Contains(decl.Id.Text))
+                if (typeDeclIds.Contains(decl.Id.Text) && !decl.IsGeneratedConstructor)
                 {
                     throw new CompileError(decl.Id, 
                     $"Type already declared in this scope with ID '{decl.Id.Text}'");
@@ -204,7 +204,7 @@ $@"#include <iostream>
             }
         }
 
-        public void EmitImpl(StreamWriter stream) 
+        public void EmitImpl(TranspilerStream stream) 
         {
             // If this is the global block, don't allow statements.
             if (Parent == null && Stmts.Count > 0)
@@ -269,12 +269,16 @@ $@"#include <iostream>
                 return matches.Single();
         }
 
-        public FnDecl? FindFn(FnCall call)
+        public FnDecl? FindFn(FnCall call, bool thisBlockOnly = false)
         {
+            if (call.ParentAccess != null && !thisBlockOnly)
+                return call.ParentAccess.Left.TypeDecl.Body.FindFn(call,
+                    thisBlockOnly: true);
+
             var matches = FindMatchingSignatures(call).ToArray();
             if (matches.Length == 0)
             {
-                if (Parent == null)
+                if (Parent == null || thisBlockOnly)
                     return null;
                 return Parent.FindFn(call);
             }
@@ -313,6 +317,8 @@ $@"#include <iostream>
 
         public void Show()
         {
+            foreach (var decl in TypeDecls)
+                decl.Show();
             foreach (var decl in FnDecls)
                 decl.Show();
             foreach (var stmt in Stmts)
@@ -365,15 +371,27 @@ $@"#include <iostream>
             return $"[TyD:{Id.Text}]";
         }
 
-        public void EmitForwardDecl(StreamWriter stream)
+        private void GenerateConstructor()
         {
+            var fn = new FnDecl(block: Body, id: new Token(Id.Text),
+                parameters: new List<Param>(),
+                returnType: new SimpleTypeSpec(new Token(Id.Text)),
+                body: new Block(Id, parent: Body));
+            fn.IsGeneratedConstructor = true;
+            Body.FnDecls.Add(fn);
+        }
+
+        public void EmitForwardDecl(TranspilerStream stream)
+        {
+            GenerateConstructor();
+
             stream.Write("struct ");
             stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
-            stream.Write(';');
+            stream.WriteLine(';');
         }
 
-        public void EmitDecl(StreamWriter stream)
+        public void EmitDecl(TranspilerStream stream)
         {
             stream.Write("struct ");
             stream.Write(Compiler.Prefix);
@@ -384,12 +402,12 @@ $@"#include <iostream>
             stream.WriteLine("};\n");
         }
 
-        public void EmitImpl(StreamWriter stream)
+        public void EmitImpl(TranspilerStream stream)
         {
             Body?.EmitImpl(stream);
         }
 
-        public void EmitSpec(StreamWriter stream)
+        public void EmitSpec(TranspilerStream stream)
         {
             stream.Write(Compiler.Prefix);
             stream.Write(Id.Text);
@@ -401,6 +419,7 @@ $@"#include <iostream>
         public readonly TypeSpec? ReturnType;
         public readonly List<Param> Params;
         public readonly Block? Body = null;
+        public bool IsGeneratedConstructor = false;
 
         public FnDecl(Block block, Token id, 
             List<Param> parameters, 
@@ -465,15 +484,23 @@ $@"#include <iostream>
             return $"[FnD:{Id.Text}({args}) -> {ReturnType}]";
         }
 
-        private void EmitPrototype(StreamWriter stream)
+        private void EmitReturnType(TranspilerStream stream)
         {
-            // Emit return type:
             if (ReturnType == null)
                 stream.Write("void");
             else
                 ReturnType.Emit(stream);
-            stream.Write(' ');
+        }
 
+        private void EmitPrototype(TranspilerStream stream)
+        {
+            EmitReturnType(stream);
+            stream.Write(' ');
+            EmitIdAndParams(stream);
+        }
+
+        private void EmitIdAndParams(TranspilerStream stream)
+        {
             // Append __ZERM__ to the front of the identifier 
             // and also a return suffix because our languages counts 
             // return type in a function signature.
@@ -491,24 +518,34 @@ $@"#include <iostream>
                 else
                     isFirst = false;
                 param.Emit(stream);
-                
+
             }
 
             stream.Write(')');
         }
 
-        public void EmitForwardDecl(StreamWriter stream)
+        public void EmitForwardDecl(TranspilerStream stream)
         {
             EmitPrototype(stream);
-            stream.WriteLine(";\n");
+            stream.WriteLine(';');
         }
 
-        public void EmitImpl(StreamWriter stream)
+        public void EmitImpl(TranspilerStream stream)
         {
-            EmitPrototype(stream);
+            EmitReturnType(stream);
+            stream.Write(' ');
+
+            if (Block.ParentDecl is TypeDecl type)
+            {
+                // Member function
+                type.EmitSpec(stream);
+                stream.Write("::");
+            }
+
+            EmitIdAndParams(stream);
             stream.WriteLine('{');
             Body?.EmitImpl(stream);
-            stream.WriteLine("}\n");
+            stream.WriteLine('}');
         }
     }
 
@@ -518,7 +555,7 @@ $@"#include <iostream>
 
         abstract public void Show();
 
-        public abstract void Emit(StreamWriter stream);
+        public abstract void Emit(TranspilerStream stream);
     }
 
     public class SimpleTypeSpec : TypeSpec
@@ -553,7 +590,7 @@ $@"#include <iostream>
             return $"[ST:{Id.Text}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             // Immutable borrow => const __ZERM__Type&
             stream.Write(Compiler.Prefix);
@@ -594,7 +631,7 @@ $@"#include <iostream>
             return $"[P:{PassedBy} {TypeSpec} {Id.Text}]";
         }
 
-        public void Emit(StreamWriter stream)
+        public void Emit(TranspilerStream stream)
         {
             if (PassedBy == PassedBy.ImmutableBorrow)
                 stream.Write("const ");
@@ -633,7 +670,7 @@ $@"#include <iostream>
 
         abstract public void Show();
 
-        public abstract void Emit(StreamWriter stream);
+        public abstract void Emit(TranspilerStream stream);
     }
 
     public class ExprStmt : Stmt
@@ -644,20 +681,27 @@ $@"#include <iostream>
 
         public ExprStmt(Block block, Expr expr) : base(block)
         {
+            if (!(expr is FnCall) && !(expr is MemberAccessExpr))
+                throw new CompileError(
+                    expr.Token, "Expression statement must be a function call or member access.");
+
             Expr = expr;
         }
 
         public override void Show()
         {
             Printer.Print(ToString());
+            Printer.Promote();
+            Expr.Show();
+            Printer.Demote();
         }
 
         public override string ToString()
         {
-            return $"[ExS:{Expr}]";
+            return $"[ExS:{Token}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             Expr.Emit(stream);
             stream.WriteLine(";");
@@ -667,6 +711,8 @@ $@"#include <iostream>
     public abstract class Expr : IShowable
     {
         public readonly Block Block;
+        
+        public MemberAccessExpr? ParentAccess = null;
         public Token? NamedArg = null;
 
         public Expr(Block block)
@@ -680,7 +726,7 @@ $@"#include <iostream>
 
         public abstract void Show();
 
-        public abstract void Emit(StreamWriter stream);
+        public abstract void Emit(TranspilerStream stream);
     }
 
     public class Conjunction : Expr 
@@ -698,7 +744,7 @@ $@"#include <iostream>
             Right = right;
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             stream.Write(Compiler.Prefix);
             stream.Write("Bool(");
@@ -735,7 +781,7 @@ $@"#include <iostream>
             Right = right;
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             stream.Write(Compiler.Prefix);
             stream.Write("Bool(");
@@ -772,7 +818,7 @@ $@"#include <iostream>
             Value = value;
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             stream.Write(Compiler.Prefix);
             stream.Write("Bool(!(");
@@ -798,7 +844,8 @@ $@"#include <iostream>
 
         public override Token Token => Id;
 
-        public FnDecl FnDecl => Block.FindFn(this)!;
+        public FnDecl FnDecl => Block.FindFn(this) ?? 
+            throw new CompileError(Token, "No matching function found");
 
         public override TypeDecl TypeDecl
         {
@@ -837,7 +884,7 @@ $@"#include <iostream>
             return $"[FnC:{Id.Text}({args})]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             if (Id.Text.StartsWith('#'))
             {
@@ -846,9 +893,12 @@ $@"#include <iostream>
             else
             {
                 // Try to find a matching function:
-                var fn = Block.FindFn(this) ?? 
-                    throw new CompileError(Token,
-                    "Cannot find matching function");
+                FnDecl? fn = null;
+                if (ParentAccess != null)
+                    fn = ParentAccess.Left.TypeDecl.Block.FindFn(this);
+                else
+                    fn = Block.FindFn(this);
+                fn = fn ?? throw new CompileError(Token, "Cannot find matching function");
 
                 // Verify that the expressions passed into the function 
                 // match the pass-by-tyep of each argument.
@@ -997,7 +1047,7 @@ $@"#include <iostream>
             return $"[Num:{LitType} {Value.Text}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             if (LitType == NumLiteralType.Int)
             {
@@ -1079,7 +1129,7 @@ $@"#include <iostream>
             return $"[Var:{Value.Text}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             var varDecl = Block.FindVar(this, throws: true)!.Value;
             stream.Write(varDecl.CName);
@@ -1117,7 +1167,7 @@ $@"#include <iostream>
             return $"[Str:{Value.Text}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             // C++ string wrapper:
             // __ZERM__String(<string>)
@@ -1159,7 +1209,7 @@ $@"#include <iostream>
             return $"[Bool:{Value.Text}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             // C++ boolean wrapper:
             // __ZERM__Bool(true)
@@ -1170,7 +1220,46 @@ $@"#include <iostream>
             stream.Write(')');
         }
     }
-    
+
+    public class MemberAccessExpr : Expr
+    {
+        public readonly Expr Left;
+        public readonly Expr Right;
+
+        public MemberAccessExpr(Block block, Expr left, Token dot, Expr right) : base(block)
+        {
+            Token = dot;
+            Left = left;
+            Right = right;
+            Right.ParentAccess = this;
+        }
+
+        public override TypeDecl TypeDecl => Right.TypeDecl;
+
+        public override Token Token { get; }
+
+        public override void Emit(TranspilerStream stream)
+        {
+            Left.Emit(stream);
+            stream.Write('.');
+            Right.Emit(stream);
+        }
+
+        public override void Show()
+        {
+            Printer.Print(ToString());
+            Printer.Promote();
+            Left.Show();
+            Right.Show();
+            Printer.Demote();
+        }
+
+        public override string ToString()
+        {
+            return $"[MemAccess:{Token}]";
+        }
+    }
+
     public class Assn : Stmt
     {
         public readonly Token Id;
@@ -1194,7 +1283,7 @@ $@"#include <iostream>
             return $"[Assn:{Id.Text} := {Value}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             var decl = Block.FindVar(
                 new VarExpr(Block, Id), throws: false
@@ -1240,7 +1329,7 @@ $@"#include <iostream>
             return $"[Let:{Id.Text} {op} {Value}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             // Declaration of a variable.
             var typeSpec = new SimpleTypeSpec(Value.TypeDecl.Id);
@@ -1281,7 +1370,7 @@ $@"#include <iostream>
             return $"[Ret:{Value}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             // Check that we are in a fn decl.
             if (Block.ParentDecl is FnDecl fn)
@@ -1347,7 +1436,7 @@ $@"#include <iostream>
             return $"[If:{Condition}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             if (Condition.TypeDecl != Block.Global().FindType("Bool"))
                 throw new CompileError(Condition.Token, 
@@ -1392,7 +1481,7 @@ $@"#include <iostream>
             return $"[Unless:{Condition}]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             if (Condition.TypeDecl != Block.Global().FindType("Bool"))
                 throw new CompileError(Condition.Token, 
@@ -1435,7 +1524,7 @@ $@"#include <iostream>
             return "[Else]";
         }
 
-        public override void Emit(StreamWriter stream)
+        public override void Emit(TranspilerStream stream)
         {
             stream.WriteLine("else{");
             Body.EmitDecl(stream);

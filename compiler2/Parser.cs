@@ -66,17 +66,13 @@ namespace compiler2
                 }
                 else if (t.Id == TokenId.Id)
                 {
-                    // Could be an assignment or a function call.
-                    var t1 = Next();
-                    if (t1.Id == TokenId.LParen)
-                    {
-                        // Function call.
-                        var fnCall = ParseFnCall(fnId: t);
-                        var t2 = Next();
-                        if (t2.Id != TokenId.Semi)
-                            throw new ParseError(t2, "Expected ';'");
+                    // Could be an assignment, member accessor, or function call.
+                    var expr = ParseMemberAccess(t, out var t1);
 
-                        var stmt = new ast.ExprStmt(block!, fnCall);
+                    if (t1.Id == TokenId.Semi)
+                    {
+                        // Expression statement.
+                        var stmt = new ast.ExprStmt(block!, expr);
                         block!.Stmts.Add(stmt);
                     }
                     else if (t1.Id == TokenId.Assign)
@@ -90,7 +86,7 @@ namespace compiler2
                         block!.Stmts.Add(assn);
                     }
                     else
-                        throw new ParseError(t, "Expected ':='");
+                        throw new ParseError(t, "Expected ':=' or '('");
                 }
                 else if (t.Id == TokenId.Let)
                 {
@@ -445,6 +441,23 @@ namespace compiler2
             return term;
         }
 
+        private ast.Expr ParseMemberAccess(Token t, out Token la)
+        {
+            var l = ParseExpr(t, out var la1);
+
+            if (la1.Id == TokenId.Dot)
+            {
+                var r = ParseExpr(Next(), out var la2);
+                la = la2;
+                return new MemberAccessExpr(block!, l, la1, r);
+            }
+            else
+            {
+                la = la1;
+                return l;
+            }
+        }
+
         private ast.Expr ParseExponential(Token t, out Token la)
         {
             if (t.Id == TokenId.Id)
@@ -471,7 +484,7 @@ namespace compiler2
                 }
                 else
                 {
-                    // Variable.
+                    // Variable or member access of some kind.
                     la = t1;
                     VerifyExpressionFollow(la);
                     return new ast.VarExpr(block!, t);
@@ -544,9 +557,10 @@ namespace compiler2
                 t1.Id == TokenId.Plus || 
                 t1.Id == TokenId.Minus || 
                 t1.Id == TokenId.FSlash || 
-                t1.Id == TokenId.RParen) {}
+                t1.Id == TokenId.RParen || 
+                t1.Id == TokenId.Dot) {}
             else
-                throw new ParseError(t1, "Expected operator, 'then', ',', ')', or ';'");
+                throw new ParseError(t1, "Unexpected expression element");
         }
 
         private ast.TypeSpec ParseTypeSpec(Token t)

@@ -48,12 +48,15 @@ namespace compiler2
             {
                 try
                 {
-                    compiler.Write(ast, outStream);
+                    compiler.Write(ast, new TranspilerStream(outStream));
+                    Console.WriteLine();
                 }
                 catch (CompileError)
                 {
+                    Console.WriteLine();
                     outStream.Close();
                     File.Delete("bin/ir.cpp");
+                    Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine("Error compiling the program:");
                     throw;
                 }

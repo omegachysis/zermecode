@@ -12,7 +12,7 @@ namespace compiler2
         /// <param name="stream"></param>
         /// <param name="fn"></param>
         /// <param name="forward">True if this is part of a forward decl process.</param>
-        public static void Emit(StreamWriter stream, ast.FnCall fn, bool forward)
+        public static void Emit(TranspilerStream stream, ast.FnCall fn, bool forward)
         {
             if (fn.Id.Text == "#cpp" ||
                 fn.Id.Text == "#cpp_forward" && forward)
