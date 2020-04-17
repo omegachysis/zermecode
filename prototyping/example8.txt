@@ -1,0 +1,26 @@
+
+trait Show
+{
+    fn ToString() -> String;
+}
+
+type Animal : Show 
+{
+    impl fn ToString() -> String 
+    {
+        return "Animal";
+    }
+}
+
+type Console
+{
+    fn _Write(String str)
+    {
+        // ...
+    }
+
+    fn Write(Object x : Show)
+    {
+        _Write(x.ToString());
+    }
+}
