@@ -1,9 +1,9 @@
 
 # Hello world program
 ```
-static type Program
+global type Program
 {
-    static fn Main()
+    global fn Main()
     {
         Console.WriteLine("Hello, world!");
     }
@@ -229,7 +229,7 @@ fn BadListAdd(List<Int> list, Int x)
 
 fn ListAddByCopy(List<Int> list, Int x)
 {
-    list.Add(x.copy());
+    list.Add(x.dynCopy());
 }
 ```
 
@@ -238,7 +238,7 @@ fn ListAddByCopy(List<Int> list, Int x)
 fn Foo(Int x)
 {
     Bar(x); // Compile error:
-    // Bar(...) cannot borrow 'x' mutably because 'x' is borrowed immutably.
+    // Bar(...) cannot borrow 'x' mutably because it is borrowed immutably.
 }
 
 fn Bar(Int& x) {}
@@ -250,8 +250,73 @@ fn Foo()
 {
     x = 0; // Immutable initialization.
     Bar(x); // Compile error:
-    // Bar(...) cannot borrow 'x' mutably because 'x' is immutable.
+    // Bar(...) cannot borrow 'x' mutably because it is immutable.
 }
 
 fn Bar(Int& x) {}
+```
+
+# Dynamic memory
+```
+fn Foo()
+{
+    let immutableHeapAllocatedInt = dyn 1;
+    let mutableHeapAllocatedInt := dyn 2;
+
+    Borrower(immutableHeapAllocatedInt);
+    // immutableHeapAllocatedInt is stil available.
+
+    MutBorrower(immutableHeapAllocatedInt); // Compile error:
+    // MutBorrower(...) cannot borrow 'immutableHeapAllocatedInt' mutably 
+    // it is immutable.
+
+    MutBorrower(mutableHeapAllocatedInt);
+    // mutableHeapAllocatedInt is stil available.
+
+    Transferrer(immutableHeapAllocatedInt);
+    // immutableHeapAllocatedInt is no longer available.
+
+    MutTransferrer(mutableHeapAllocatedInt);
+    // mutableHeapAllocatedInt is no longer available.
+}
+
+fn Borrower(Int x) {}
+
+fn MutBorrower(Int& x) {}
+
+fn Transferrer(Int* x) {}
+
+fn MutTransferrer(Int*& x) {}
+```
+
+# Basic user-defined type
+```
+type Foo
+{
+    // Static members (copy semantics from constructor):
+    Int _privateImmutableMember = 1;
+    Int PublicMutableMember := 2;
+    Int ImmutableRequiredOnConstruction = ?;
+    Int MutableRequiredOnConstruction := ?;
+    Int _mutableOptionalOnConstruction := 1?;
+
+    // Dynamic members (heap-allocated memory transferred by constructor):
+    Int* DynamicMember := ?;
+}
+
+fn Test()
+{
+    let heapAllocatedInt = dyn 3;
+
+    let foo = Foo(
+        ImmutableRequiredOnConstruction: 1,
+        MutableRequiredOnConstruction: 2,
+        DynamicMember: heapAllocatedInt,
+    );
+
+    // heapAllocatedInt is transferred to Foo, it is no longer available here.
+    print(heapAllocatedInt); // Compile error:
+    // print(...) cannot borrow 'heapAllocatedInt' because it was transferred 
+    // into 'Foo(...)' on line 278.
+}
 ```
