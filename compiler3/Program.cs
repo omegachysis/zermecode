@@ -1,5 +1,7 @@
 ﻿#nullable enable
 using System;
+using System.IO;
+using System.Text;
 
 namespace compiler3
 {
@@ -7,7 +9,14 @@ namespace compiler3
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            using (var input = new StreamReader(File.OpenRead("input.zrm")))
+            {
+                var lexer = new Lexer(input);
+                foreach (var token in lexer.Lex())
+                {
+                    Console.WriteLine(token);
+                }
+            }
         }
     }
 }

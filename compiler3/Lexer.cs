@@ -19,18 +19,18 @@ namespace compiler3
     {
         private readonly StreamReader _input;
 
-        public int Line { get; private set; }
-        public int Col { get; private set; }
+        public int Line { get; private set; } = 1;
+        public int Col { get; private set; } = 0;
 
         public Lexer(StreamReader input)
         {
             _input = input;
         }
 
-        private Token Symbol(TokenId symbol, int size)
+        private Token Symbol(TokenId symbol, int len)
         {
-            Col += size;
-            return new Token(symbol, Line, Col);
+            Col += len;
+            return new Token(symbol, Line, Col - (len - 1));
         }
 
         private char? _read()
@@ -83,6 +83,8 @@ namespace compiler3
                 {
                     // Start reading a number literal.
                     var num = new StringBuilder();
+                    var line = Line;
+                    var col = Col;
                     num.Append(c);
                     while (true)
                     {
@@ -93,13 +95,15 @@ namespace compiler3
                             break;
                     }
 
-                    yield return new Token(TokenId.NumLit,
-                        num.ToString(), Line, Col);
+                    yield return new Token(TokenId.NumLit, num.ToString(),
+                        line, col);
                 }
                 else if (char.IsLetter(c))
                 {
                     // Start reading an identifier.
                     var id = new StringBuilder();
+                    var line = Line;
+                    var col = Col;
                     id.Append(c);
                     while (true)
                     {
@@ -110,7 +114,7 @@ namespace compiler3
                             break;
                     }
 
-                    yield return new Token(id.ToString(), Line, Col);
+                    yield return new Token(id.ToString(), line, col);
                 }
 
                 // Not an else here because we may have broken out of the above two 
@@ -132,6 +136,8 @@ namespace compiler3
                 {
                     yield return Symbol(TokenId.DoubleQuote, 1);
                     var str = new StringBuilder();
+                    var line = Line;
+                    var col = Col;
 
                     // Starting a string literal.
                     while (true)
@@ -164,8 +170,8 @@ namespace compiler3
                             str.Append(c);
                     }
 
-                    yield return new Token(TokenId.StringLit,
-                        str.ToString(), Line, Col);
+                    yield return new Token(TokenId.StringLit, str.ToString(),
+                        line, col);
                     yield return Symbol(TokenId.DoubleQuote, 1);
                 }
                 else
