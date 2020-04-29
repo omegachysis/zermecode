@@ -29,8 +29,9 @@ namespace compiler3
 
 		private Token Symbol(TokenId symbol, int len)
 		{
+			var t = new Token(symbol, Line, Col - (len - 1));
 			Col += len;
-			return new Token(symbol, Line, Col - (len - 1));
+			return t;
 		}
 
 		private char? _read()

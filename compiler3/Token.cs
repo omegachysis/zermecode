@@ -65,9 +65,9 @@ public struct Token
 	{
 		var locText = $"{Line}:{Col}";
 		if (Text == string.Empty)
-			return $"<{Id}, {locText}>";
+			return $"<{Id} @ {locText}>";
 		else
-			return $"<`{Regex.Escape(Text)}`, {locText}>";
+			return $"<{Id} `{Regex.Escape(Text)}` @ {locText}>";
 	}
 }
 
