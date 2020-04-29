@@ -1,4 +1,4 @@
-
+﻿
 type Example {
     Int a = 0; // Immutable and initialized.
     Int b = ?; // Immutable and uninitialized, so it must be initialized on construction.

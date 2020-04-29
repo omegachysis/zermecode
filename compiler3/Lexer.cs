@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using System;
 using System.Collections.Generic;
@@ -162,7 +162,8 @@ namespace compiler3
 							else if (c == '"')
 								str.Append('"');
 							else
-								throw new LexException($"Unrecognized escape character '\\{c}'",
+								throw new LexException(
+									$"Unrecognized escape character '\\{Regex.Escape(c.ToString())}'",
 									Line, Col);
 
 							str.Append(c);

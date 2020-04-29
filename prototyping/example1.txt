@@ -1,4 +1,4 @@
-type Vec3 {
+﻿type Vec3 {
     // ?= is the 'default equality operator'. It means that 
     // the quantity will be equal to the value unless it is 
     // specified otherwise when the variable is declared (on construction of Vec3).

@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;

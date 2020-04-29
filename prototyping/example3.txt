@@ -1,4 +1,4 @@
-fn truncate(Float x) -> Int {
+﻿fn truncate(Float x) -> Int {
     ...
     assert x - 1 <= ans <= x;
     ans

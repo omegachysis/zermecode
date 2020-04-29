@@ -1,4 +1,4 @@
-print = Std.Console.writeLine;
+﻿print = Std.Console.writeLine;
 
 fn main() {
     a = 1; // Int

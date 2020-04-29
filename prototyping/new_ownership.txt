@@ -1,4 +1,4 @@
-fn Main()
+﻿fn Main()
 {
     let a := dyn Object();
     // Dyn<Object> a = Dyn<Object>(new Object());

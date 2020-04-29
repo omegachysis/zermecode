@@ -1,4 +1,4 @@
-type Vec3<T> where T : Field {
+﻿type Vec3<T> where T : Field {
     T x ?= T.zero;
     T y ?= T.zero;
     T z ?= T.zero;

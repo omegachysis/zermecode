@@ -1,4 +1,4 @@
-
+﻿
 fn square(Int x) -> Int {
     x * x
 }

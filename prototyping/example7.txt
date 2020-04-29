@@ -1,4 +1,4 @@
-
+﻿
 // If the proposition is not proven, try to prove it now. If it can't be 
 // proven, raise a compile error.
 #prove(proposition);

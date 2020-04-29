@@ -1,4 +1,4 @@
-type MyInt {
+﻿type MyInt {
     Int x ?= 0;
 }
 

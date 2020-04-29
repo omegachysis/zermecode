@@ -1,4 +1,4 @@
-
+﻿
 type Thing {
     Int x := 0;
 

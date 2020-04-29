@@ -1,4 +1,4 @@
-
+﻿
 PROOFS for objects that could have pointers to them:
 Consider the following problem:
 

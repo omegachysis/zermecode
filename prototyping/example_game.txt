@@ -1,4 +1,4 @@
-trait Transformable
+﻿trait Transformable
 {
     Transform Transform, get, set;
 }

@@ -1,4 +1,4 @@
-set -e
+﻿set -e
 
 echo "Cleaning files..."
 rm -rf bin/compiler || true

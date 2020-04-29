@@ -1,4 +1,4 @@
-type Shape {
+﻿type Shape {
     fn draw(Ctx&);
     fn translate&(Real x, Real y);
 }

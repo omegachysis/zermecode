@@ -1,4 +1,4 @@
-type Gender = Male, Female, Other;
+﻿type Gender = Male, Female, Other;
 
 type Player {
     String name = ?;

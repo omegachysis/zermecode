@@ -1,4 +1,4 @@
-type Bool
+﻿type Bool
 {
     #cpp_forward("bool val;");
     #cpp_forward("#__Bool(bool val) { 
