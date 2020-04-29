@@ -27,6 +27,14 @@ public struct Token
         Col = col;
     }
 
+    public Token(TokenId id, string text, int line, int col)
+    {
+        Id = id;
+        Text = text;
+        Line = line;
+        Col = col;
+    }
+
     /// <summary>
     /// Create a new token for an identifier.
     /// </summary>
@@ -70,19 +78,18 @@ public enum TokenId
     Fn,
     LParen,
     RParen,
-    Begin,
-    End,
+    LBrace,
+    RBrace,
     RArrow,
     Comma,
     Semi,
-    Num,
+    StringLit,
+    DoubleQuote,
     Eq,
-    Str,
-    Bool,
     Return,
     Type,
     Dot,
-    Assign,
+    ColonEq,
     Colon,
     If,
     Else,
@@ -104,4 +111,5 @@ public enum TokenId
     LAngleEq,
     RAngleEq,
     NotEq,
+    NumLit,
 }

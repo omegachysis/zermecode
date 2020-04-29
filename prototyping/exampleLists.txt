@@ -1,0 +1,37 @@
+type Item
+{
+    String Name = ?;
+}
+
+// List<Item>.Add signature:
+// Add&(Item* item);
+
+// ListMut<Item>.Add signature:
+// Add&(Item*& item);
+
+// List<Item>.Get signature:
+// Get(Int index) -> Item';
+
+// List<Item>.Set signature:
+// Set&(Int index, Item* item);
+
+// ListMut<Item>.Get signature:
+// Get(Int index) -> Item&;
+
+// ListMut<Item>.Set signature:
+// Set&(Int index, Item*& item);
+
+type Program
+{
+    global fn Main()
+    {
+        let items = List<Item>();
+        items.Add(dyn Item("Apple"));
+        items.Add(dyn Item("Banana"));
+
+        print(items.Get(0)).Name); // "Apple"
+        items.Get(0).Name = "Rotten Apple"; // Compile Error:
+        // Cannot invoke mutable property setter 'Name' on an 
+        // immutable reference.
+    }
+}

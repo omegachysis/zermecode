@@ -1,9 +1,9 @@
 
 # Hello world program
 ```
-global type Program
+static type Program
 {
-    global fn Main()
+    static fn Main()
     {
         Console.WriteLine("Hello, world!");
     }
@@ -293,7 +293,7 @@ fn MutTransferrer(Int*& x) {}
 ```
 type Foo
 {
-    // Static members (copy semantics from constructor):
+    // Value members (copy semantics from constructor):
     Int _privateImmutableMember = 1;
     Int PublicMutableMember := 2;
     Int ImmutableRequiredOnConstruction = ?;
@@ -315,8 +315,45 @@ fn Test()
     );
 
     // heapAllocatedInt is transferred to Foo, it is no longer available here.
-    print(heapAllocatedInt); // Compile error:
-    // print(...) cannot borrow 'heapAllocatedInt' because it was transferred 
+    Console.Write(heapAllocatedInt); // Compile error:
+    // Console.Write(...) cannot borrow 'heapAllocatedInt' because it was transferred 
     // into 'Foo(...)' on line 278.
+}
+```
+
+# References
+```
+fn Foo()
+{
+    let x = 0;
+    let refToX = x';
+    Console.Write(x'); // "0"
+    
+    let y := 1;
+    let refToY = y';
+    let mutRefToY = y&;
+    Console.Write(y'); // "1";
+
+    let list = List["1", "2"];
+    let listMut = ListMut["3", "4"];
+
+    Console.Write(First(list)); // "1";
+
+    First(list).append("x"); // Compile error:
+    // Cannot invoke mutable method 'append(...)' on an immutable reference 
+    // to String.
+
+    Console.Write(First(listMut)); // Compile error:
+
+}
+
+fn First(List<String> strings) -> String'
+{
+    return strings[0];
+}
+
+fn First&(ListMut<String> strings) -> String&
+{
+    return strings[0];
 }
 ```
